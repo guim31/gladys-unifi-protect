@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-13
+
 ### Added
 
 - UniFi Protect cameras, doorbells, floodlights and sensors in Gladys, over the
@@ -35,3 +37,6 @@ the notes of the version's GitHub Release.
 - Explicit choice to accept the self-signed certificate of the console.
 - Feature names, messages and documentation in English, French, German and
   Spanish.
+
+[Unreleased]: https://github.com/guim31/gladys-unifi-protect/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-unifi-protect/releases/tag/v1.0.1

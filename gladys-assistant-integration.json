@@ -8,8 +8,8 @@
     "de": "UniFi-Protect-Kameras, Türklingeln, Flutlichter und Sensoren lokal: Erkennungen, Bilder, Klingeln.",
     "es": "Cámaras, timbres, focos y sensores UniFi Protect en local: detecciones, imágenes, timbre."
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/guim31/gladys-unifi-protect:1.0.0",
+  "version": "1.0.1",
+  "docker_image": "ghcr.io/guim31/gladys-unifi-protect:1.0.1",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/guim31/gladys-unifi-protect/main/cover.png",
   "categories": ["security"],
