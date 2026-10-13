@@ -1,77 +1,121 @@
+// -----------------------------------------------------------------------------
+// The `protect` dashboard widget: content within the core budget (checked with
+// the SDK's validator), every camera or one, the detections with their image.
+// -----------------------------------------------------------------------------
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateWidgetContent } from '@gladysassistant/integration-sdk';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { buildDiscoveredDevices } from '../src/devices/index.js';
-import { simulateLanSession } from '../src/devices/plug.js';
-import { DEMO_STATUS_WIDGET, WIDGETS, refreshWidgets } from '../src/widgets.js';
-import { normalizeConfig } from '../src/config.js';
+import { WIDGET_KEY } from '../src/hub.js';
+import {
+  BASE_CONFIG,
+  FakeProtect,
+  MACS,
+  cameraIds,
+  createAll,
+  createWorld,
+} from './helpers/world.js';
 
-const gladys = createFakeGladys();
-const config = normalizeConfig();
-const demoStatus = WIDGETS[DEMO_STATUS_WIDGET];
+async function world(t, options) {
+  const w = await createWorld(options);
+  t.after(() => w.app.stop());
+  return w;
+}
 
-// What the SDK passes to onWidgetGet, plus the config index.js adds.
-const getContent = (cfg = config) =>
-  demoStatus.get(gladys, { settings: {}, language: 'en', units: 'metric', config: cfg });
+async function content(w, settings = {}, language = 'en') {
+  const ack = await w.fake.widgetGet(WIDGET_KEY, { settings, language });
+  assert.equal(ack.success, true, ack.error);
+  const { content: tree } = ack.data;
+  assert.deepEqual(validateWidgetContent(tree), [], 'within the core vocabulary and budget');
+  assert.ok(tree.components.length <= 8);
+  return tree;
+}
 
-test('the demo_status content is rendered exactly as sent', async () => {
-  // [] = nothing the core would drop, truncate or trim to the content budget.
-  assert.deepEqual(validateWidgetContent(await getContent()), []);
-});
+const ofType = (tree, type) => tree.components.filter((component) => component.type === type);
 
-test('the degraded plug connection content is valid too', async () => {
-  simulateLanSession(false);
-  try {
-    const content = await getContent();
-    assert.deepEqual(validateWidgetContent(content), []);
-    const status = content.components.find((component) => component.type === 'status');
-    assert.ok(
-      status.items.some((item) => item.color === 'warning'),
-      'degraded shows a warning',
-    );
-  } finally {
-    simulateLanSession(true);
-  }
-});
-
-test('the live tiles reference features the integration publishes', async () => {
-  const featureIds = new Set(
-    buildDiscoveredDevices(gladys, config).flatMap((device) =>
-      device.features.map((feature) => feature.external_id),
-    ),
+test('every camera: online count, detections, state of each camera', async (t) => {
+  const w = await world(t);
+  const tree = await content(w);
+  assert.deepEqual(
+    ofType(tree, 'value').map(({ label, value }) => [label, value]),
+    [
+      ['Cameras online', '3/4'],
+      ['Detections 24 h', 0],
+    ],
   );
-  const liveTiles = (await getContent()).components.filter((c) => c.device_feature);
-  assert.ok(liveTiles.length > 0, 'the template demonstrates a device-bound tile');
-  for (const tile of liveTiles) {
-    assert.ok(featureIds.has(tile.device_feature), `unknown feature ${tile.device_feature}`);
-  }
-});
-
-test('every button action of the content is handled and answers a short toast', async () => {
-  const buttons = (await getContent()).components.filter((c) => c.type === 'button' && c.action);
-  assert.ok(buttons.length > 0, 'the template demonstrates a widget action');
-  for (const { action } of buttons) {
-    const message = await demoStatus.action(gladys, {
-      actionKey: action.key,
-      params: action.params ?? {},
-      settings: {},
-      config,
-    });
-    assert.ok(message.en, 'the toast carries at least the mandatory `en` text');
-    assert.ok(message.en.length <= 200, 'toasts are capped at 200 characters');
-  }
-});
-
-test('an unknown widget action fails, so the user sees the error', async () => {
-  await assert.rejects(
-    demoStatus.action(gladys, { actionKey: 'unknown', params: {}, settings: {}, config }),
-    /Unknown widget action/,
+  assert.equal(ofType(tree, 'card-list').length, 0);
+  assert.match(ofType(tree, 'text')[0].text, /No detection/);
+  const [status] = ofType(tree, 'status');
+  assert.deepEqual(
+    status.items.map(({ label, value }) => [label, value]),
+    [
+      ['Allée', 'Online'],
+      ['Camera 000004', 'Online'],
+      ['Garage', 'Offline'],
+      ["Porte d'entrée", 'Online'],
+    ],
   );
 });
 
-test('refreshWidgets nudges every widget', () => {
-  const fresh = createFakeGladys();
-  refreshWidgets(fresh);
-  assert.deepEqual(fresh.fake.widgetRefreshes, Object.keys(WIDGETS));
+test('the detections, newest first, with the image taken when they happened', async (t) => {
+  const w = await world(t);
+  await createAll(w);
+  await w.events('smartdetect-lifecycle.json');
+  w.clock.advance(60_000);
+  await w.events('ring.json');
+  const tree = await content(w, {}, 'fr');
+  const [list] = ofType(tree, 'card-list');
+  assert.deepEqual(
+    list.items.map(({ title }) => title),
+    ["Sonnette · Porte d'entrée", 'Personne, véhicule · Allée'],
+  );
+  assert.equal(ofType(tree, 'value')[1].value, 2);
+  // Each image is served by its key, as raw base64 of a JPEG.
+  for (const item of list.items) {
+    const image = await w.fake.widgetGetImage(item.image);
+    assert.equal(image.success, true, image.error);
+    assert.equal(Buffer.from(image.data.image, 'base64')[0], 0xff);
+  }
+  assert.equal((await w.fake.widgetGetImage('det-unknown')).success, false);
+  assert.ok(w.fake.widgetRefreshes.includes(WIDGET_KEY), 'a detection nudges the widget');
+});
+
+test('one camera: its tiles, its detections, its row', async (t) => {
+  const w = await world(t);
+  await w.events('smartdetect-lifecycle.json');
+  await w.events('ring.json');
+  const tree = await content(w, { camera: cameraIds(w.gladys, MACS.DOORBELL).device });
+  assert.equal(ofType(tree, 'value')[0].value, '1/1');
+  assert.equal(ofType(tree, 'value')[1].value, 1);
+  assert.deepEqual(
+    ofType(tree, 'card-list')[0].items.map(({ title }) => title),
+    ["Doorbell · Porte d'entrée"],
+  );
+  assert.equal(ofType(tree, 'status')[0].items.length, 1);
+  const gone = await content(w, { camera: w.gladys.externalIds('camera', 'f4e2c6999999').device });
+  assert.match(gone.components[0].text, /no longer in UniFi Protect/);
+});
+
+test('floodlights and sensors offline are counted on one row', async (t) => {
+  const protect = new FakeProtect();
+  protect.lights[0].state = 'DISCONNECTED';
+  protect.sensors[1].state = 'DISCONNECTED';
+  const w = await world(t, { protect });
+  const [status] = ofType(await content(w), 'status');
+  assert.deepEqual(status.items.at(-1), {
+    label: 'Floodlights, sensors offline',
+    icon: 'alert-triangle',
+    value: 2,
+    color: 'warning',
+  });
+});
+
+test('not configured, or console unreachable: the widget says so', async (t) => {
+  const empty = await world(t, { config: {} });
+  assert.match((await content(empty)).components[0].text, /Enter the address/);
+  const w = await world(t, { config: { ...BASE_CONFIG } });
+  w.protect.online = false;
+  await w.hub.refresh();
+  const tree = await content(w, {}, 'de');
+  assert.match(ofType(tree, 'text')[0].text, /Konsole antwortet nicht/);
 });

@@ -1,93 +1,105 @@
+// -----------------------------------------------------------------------------
+// The scene actions: a fresh camera image for the next action, the doorbell
+// screen message. Nothing they do can lower the security of the house.
+// -----------------------------------------------------------------------------
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { DEVICE_BLUEPRINTS } from '../src/devices/index.js';
-import { MOTION_DETECTED_TRIGGER, motionSensor } from '../src/devices/motionSensor.js';
-import { SCENE_ACTIONS } from '../src/scenes.js';
-import { normalizeConfig } from '../src/config.js';
+import { HUB_TIMINGS } from '../src/hub.js';
+import { parseMinutes } from '../src/scenes.js';
+import { IDS, MACS, cameraIds, createAll, createWorld } from './helpers/world.js';
 
-const manifest = JSON.parse(
-  await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
-);
-const config = normalizeConfig();
+async function world(t) {
+  const w = await createWorld();
+  t.after(() => w.app.stop());
+  await createAll(w);
+  return w;
+}
 
-const declarationOf = (list, key) => manifest[list].find((entry) => entry.key === key);
-const keysOf = (list) => (list ?? []).map((entry) => entry.key);
-const deviceIdOf = (gladys, key) =>
-  DEVICE_BLUEPRINTS.find((bp) => bp.key === key).deviceExternalId(gladys);
+const lcdPatches = (w) =>
+  w.protect.requests
+    .filter(
+      (request) => request.method === 'PATCH' && request.path.endsWith(`/cameras/${IDS.DOORBELL}`),
+    )
+    .map((request) => request.json.lcdMessage);
 
-// Let the async interval callback run to completion.
-const flush = () => new Promise((resolve) => setImmediate(resolve));
-
-test('the motion sensor fires one motion_detected event per detection, none on the clear', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'one detection, one event');
-    assert.equal(gladys.fake.sceneEvents[0].key, MOTION_DETECTED_TRIGGER);
-    assert.equal(gladys.fake.states.at(-1).state, 1, 'the state is still published');
-
-    t.mock.timers.tick(10_000);
-    await flush();
-    assert.equal(gladys.fake.states.at(-1).state, 0, 'the detection is cleared');
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'the clear fires no event');
-  } finally {
-    stopPush();
-  }
-});
-
-test('motion_detected data only carries keys the trigger declares', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-  } finally {
-    stopPush();
-  }
-  const [{ data }] = gladys.fake.sceneEvents;
-  const trigger = declarationOf('scene_triggers', MOTION_DETECTED_TRIGGER);
-  // The core keeps the `fields` keys (filters) and the `variables` keys
-  // (exposed to the scene): any other key would be silently dropped.
-  const declared = [...keysOf(trigger.fields), ...keysOf(trigger.variables)];
-  for (const [key, value] of Object.entries(data)) {
-    assert.ok(declared.includes(key), `data.${key} is not declared, the core would drop it`);
-    assert.ok(value === null || typeof value !== 'object', `data.${key} must be a primitive`);
-  }
-  // A `"source": "devices"` filter stores a device external_id.
-  assert.equal(data.device, deviceIdOf(gladys, 'motion-sensor'));
-  const targets = trigger.fields.find((field) => field.key === 'target').options;
-  assert.ok(
-    targets.some((option) => option.value === data.target),
-    `data.target "${data.target}" must be one of the filter options`,
+test('refresh_snapshot sends a fresh image of the camera to Gladys', async (t) => {
+  const w = await world(t);
+  const images = w.fake.cameraImages.length;
+  const ack = await w.fake.sceneAction('refresh_snapshot', {
+    camera: cameraIds(w.gladys, MACS.DRIVEWAY).device,
+  });
+  assert.equal(ack.success, true, ack.error);
+  assert.equal(w.fake.cameraImages.length, images + 1, 'fresh, even within the 6 s spacing');
+  assert.equal(
+    w.fake.cameraImages.at(-1).device_external_id,
+    cameraIds(w.gladys, MACS.DRIVEWAY).device,
   );
+  w.protect.snapshotStatus = 503;
+  w.clock.advance(HUB_TIMINGS.imageSpacingMs);
+  const failed = await w.fake.sceneAction('refresh_snapshot', {
+    camera: cameraIds(w.gladys, MACS.DRIVEWAY).device,
+  });
+  assert.equal(failed.success, false);
+  assert.match(failed.error, /did not send an image/);
 });
 
-test('identify_device signals the chosen device and returns the declared outputs', async () => {
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'light') },
-    config,
-  });
-  assert.deepEqual(outputs, { signalled: true });
-  const declared = keysOf(declarationOf('scene_actions', 'identify_device').outputs);
-  for (const key of Object.keys(outputs)) {
-    assert.ok(declared.includes(key), `output "${key}" is not declared, the core would drop it`);
-  }
+test('refresh_snapshot refuses a device that is not a camera of the console', async (t) => {
+  const w = await world(t);
+  const light = w.gladys.externalIds('light', MACS.FLOODLIGHT).device;
+  assert.equal((await w.fake.sceneAction('refresh_snapshot', { camera: light })).success, false);
+  assert.equal((await w.fake.sceneAction('refresh_snapshot', {})).success, false);
 });
 
-test('identify_device reports a device that cannot signal itself through its output', async () => {
-  // Not a failure: a scene action is never a condition, the scene author
-  // gates the following actions on the output instead.
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'weather-station') },
-    config,
+test('set_doorbell_message: the three messages, for a while or until changed, and clearing', async (t) => {
+  const w = await world(t);
+  const doorbell = cameraIds(w.gladys, MACS.DOORBELL).device;
+  const now = w.clock.now();
+  const send = (fields) => w.fake.sceneAction('set_doorbell_message', { doorbell, ...fields });
+
+  assert.equal((await send({ message: 'do_not_disturb', duration: 60 })).success, true);
+  assert.equal((await send({ message: 'leave_package', duration: 0 })).success, true);
+  assert.equal(
+    (await send({ message: 'custom', text: '  Back at 6 pm  ', duration: 30 })).success,
+    true,
+  );
+  assert.equal((await send({ message: 'clear' })).success, true);
+  assert.deepEqual(lcdPatches(w), [
+    { type: 'DO_NOT_DISTURB', resetAt: now + 60 * 60_000 },
+    { type: 'LEAVE_PACKAGE_AT_DOOR', resetAt: null },
+    { type: 'CUSTOM_MESSAGE', text: 'Back at 6 pm', resetAt: now + 30 * 60_000 },
+    // A message whose reset time has passed is how Protect clears one.
+    { type: 'DO_NOT_DISTURB', resetAt: 0 },
+  ]);
+  // The screen shows 30 characters.
+  await send({ message: 'custom', text: 'x'.repeat(50) });
+  assert.equal(lcdPatches(w).at(-1).text.length, 30);
+});
+
+test('set_doorbell_message refuses an empty custom text and a camera without a screen', async (t) => {
+  const w = await world(t);
+  const doorbell = cameraIds(w.gladys, MACS.DOORBELL).device;
+  const empty = await w.fake.sceneAction('set_doorbell_message', {
+    doorbell,
+    message: 'custom',
+    text: ' ',
   });
-  assert.deepEqual(outputs, { signalled: false });
+  assert.equal(empty.success, false);
+  assert.match(empty.error, /text of the message/);
+  const notDoorbell = await w.fake.sceneAction('set_doorbell_message', {
+    doorbell: cameraIds(w.gladys, MACS.DRIVEWAY).device,
+    message: 'do_not_disturb',
+  });
+  assert.equal(notDoorbell.success, false);
+  assert.match(notDoorbell.error, /not a doorbell/);
+  assert.deepEqual(lcdPatches(w), []);
+});
+
+test('durations: integers from 0 to a day, comma accepted, a default otherwise', () => {
+  assert.equal(parseMinutes(30), 30);
+  assert.equal(parseMinutes('12,6'), 13);
+  assert.equal(parseMinutes(-5), 0);
+  assert.equal(parseMinutes(99999), 1440);
+  assert.equal(parseMinutes('soon'), 60);
+  assert.equal(parseMinutes(undefined), 0);
 });

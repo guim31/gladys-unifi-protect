@@ -1,61 +1,233 @@
-# Demo Devices Template
+# UniFi Protect
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+Brings the cameras, doorbells, floodlights and sensors of a UniFi Protect
+console (UDM, UCG, UNVR, Cloud Key) into Gladys, **locally**: motion and smart
+detections (person, vehicle, animal, package), camera images, doorbell rings,
+floodlight control, door and window sensors, temperature, humidity,
+brightness, water leaks, batteries. Everything goes through the official
+Protect Integration API of your console: no Ubiquiti cloud account, nothing
+leaves your network.
 
-## What you get
+> **Developed without the hardware: feedback welcome.** This integration was
+> written from the official API specification and real payloads, without a
+> Protect console at hand. If something does not work as described, please
+> open an issue on
+> [github.com/guim31/gladys-unifi-protect/issues](https://github.com/guim31/gladys-unifi-protect/issues)
+> with the integration logs (`LOG_LEVEL=debug`).
+>
+> This integration is not affiliated with Ubiquiti. UniFi and UniFi Protect are
+> trademarks of Ubiquiti Inc.
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+## What you need
 
-## Configuration
+- A UniFi console running **UniFi Protect 6 or later** (the Integration API;
+  7.x recommended): Dream Machine, Cloud Gateway, UNVR, Cloud Key Gen2+…
+- An **API key** created in the console (see below). A user without
+  administrator rights on Protect may get a key that sees nothing.
+- Gladys **5.1 or later**, able to reach the console over HTTPS (port 443 by
+  default) on your network.
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+## Set up
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+### Create an API key
 
-## Actions
+1. Open your UniFi console locally in a browser (for example
+   `https://192.168.1.1`).
+2. Go to **Settings**, **Control Plane**, **Integrations**.
+3. Create an API key, give it a name (for example "Gladys") and copy it: the
+   console shows it only once.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+### Settings
 
-## Scenes
+In Gladys, open the integration, then its **Configuration** tab:
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+- **Console address**: the IP address or name of the console, with `:port`
+  if it is not 443. A URL copied from the browser works too.
+- **API key**: the key you just created. It is sent to your console only.
+- **Accept the self-signed certificate**: UniFi consoles serve a
+  self-signed certificate, which a browser warns about. Tick this box to
+  accept it, unless your console has a certificate your network trusts. The
+  box is off by default: accepting a certificate that cannot be verified must
+  be your choice.
+- **Camera images**: how often the image of each camera added to Gladys is
+  refreshed (every 5 minutes by default, or only on detection). Detections,
+  rings and the live view always ask for a fresh image.
+- **Language of the names**: the language of the feature names and of the
+  texts sent to the scenes (French by default). Names are set when a device
+  is added to Gladys.
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+Save: the status under the integration name turns to connected, and the
+devices appear in the **Discover** tab. Add the ones you want.
+
+### Configuration actions
+
+- **Test the connection**: reads the console now and shows its Protect
+  version, how many cameras, floodlights and sensors it has, and the SHA-256
+  fingerprint of the certificate you accepted (compare it with the one your
+  browser shows for the console).
+- **Show the video stream address**: pick a camera, and the RTSP address of
+  its video stream is shown under the button, ready for the "RTSP camera"
+  integration of Gladys (see [Live video](#live-video)).
+
+## The devices
+
+### Cameras
+
+One device per camera, named as in Protect:
+
+- **Image**: the camera image, refreshed at the chosen interval, at every
+  detection and ring, and whenever you open it on the dashboard;
+- **Online**: on while the camera is connected to the console;
+- **Motion**: on while Protect sees motion;
+- **Person**, **Vehicle**, **Animal**, **Package**: on while a smart
+  detection of that kind is in progress — only the kinds your camera can
+  detect. A package is reported once by Protect: the feature turns on for
+  10 seconds.
+
+### Doorbells
+
+A doorbell is a camera with one more feature, **Doorbell ring**: it turns on
+for 10 seconds at each ring, and Gladys shows when it last rang. A doorbell
+the console does not name as such (older firmware) gets this feature at its
+first ring: click **Update** on it in the **Discover** tab.
+
+### Floodlights
+
+- **Light**: turning it on forces the light on; turning it off gives it back
+  to its own lighting mode (motion, schedule…) — it may stay lit until the
+  end of its timer. The state shown is the real state of the light, whatever
+  turned it on.
+- **Motion**: the motion sensor of the floodlight.
+- **Online**.
+
+### Sensors
+
+UP-Sense sensors get the features their mount allows:
+
+- **Opening**: open or closed, for a sensor on a door, a window or a garage
+  door;
+- **Temperature** (°C), **Humidity** (%), **Brightness** (lux), **Motion**;
+- **Water leak**, for a sensor on a leak mount;
+- **Battery** (%);
+- **Online**.
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+The **UniFi Protect** widget shows at a glance:
+
+- the cameras online (3/4) and the detections of the last 24 hours;
+- the last detections and rings, newest first, each with the image taken
+  when it happened;
+- the state of each camera, and the floodlights and sensors offline, if any.
+
+In its settings, pick a camera to show only that one. The detections are kept
+in memory: the list starts empty after a restart of the integration.
+
+## Scenes
+
+### Triggers
+
+- **Object detected by a camera**: a smart detection of Protect. Filters:
+  the camera, and what was detected (person, vehicle, animal, package,
+  license plate, face); left empty, any matches. A detection that sees a
+  person, then a vehicle, starts the scene once for each. The actions can
+  use the camera name and the object type (code `person`, or its name in
+  the language of the integration). When the scene starts, the image of the
+  camera in Gladys is already the one of the detection.
+- **Someone rang the doorbell**: a doorbell was pressed. Filter: the
+  doorbell. The actions can use its name. The doorbell image in Gladys is
+  already the one of the ring.
+
+The states of the devices (motion, person, opening, temperature…) are also
+available to the usual "device state" trigger of Gladys.
+
+### Actions
+
+- **Refresh a camera image**: takes a fresh image of a camera for Gladys,
+  so that the next action ("send a camera image" in a message) sends what
+  the camera sees now.
+- **Show a message on the doorbell**: changes the message of the doorbell
+  screen: do not disturb, leave the package at the door, your own text
+  (30 characters at most), or clears it — for a number of minutes, or until
+  changed (0).
+
+There is no action to arm, disarm, silence or stop recording anything: the
+Protect Integration API does not offer the recording mode nor the
+notifications, and nothing in Gladys should be able to lower the security of
+the house by mistake.
+
+### Scene ideas
+
+- **Someone rings**: trigger "Someone rang the doorbell", then "send a camera
+  image" of the doorbell to your phone with the message "Someone at the
+  door".
+- **Person in the driveway at night**: trigger "Object detected by a camera"
+  (camera Driveway, Person), a condition on the time, then turn the garden
+  lights on for 5 minutes.
+- **A package was delivered**: trigger "Object detected by a camera"
+  (Package), then a message "A package was delivered" with the image.
+- **Away from home**: when the house becomes empty, "Show a message on the
+  doorbell" (leave the package at the door, duration 0); when you come back,
+  clear it.
+- **Water leak**: trigger "device state" on the **Water leak** feature, then
+  an alert on every phone.
+
+## Live video
+
+The **Image** feature shows still images. For live video, use the "RTSP
+camera" integration of Gladys:
+
+1. In Protect, open the camera settings, **Advanced**, and enable an **RTSP**
+   stream (high, medium or low quality).
+2. In Gladys, run **Show the video stream address** with that camera.
+3. Add the camera in the "RTSP camera" integration with this address
+   (`rtsp://<console>:7447/…`).
+
+The address works as a password of the stream: share it with nobody.
+
+## Refresh and limits of the API
+
+Gladys never polls these devices: the integration follows the console live
+over two WebSockets of the Integration API (devices and events), and reads
+the full state again every 5 minutes (every minute while the live link is
+down). The values are sent to Gladys only when they change, and again every
+6 hours when they do not.
+
+Images: at most one image every 6 seconds per camera (Gladys accepts 12 a
+minute), read one camera after the other. The console limits the API to
+about 10 requests per second; the integration stays far below.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **"The console does not answer"**: check the address, that the console is
+  on, and that Gladys can reach it (same network, firewall).
+- **"self-signed certificate"**: tick **Accept the self-signed
+  certificate**.
+- **"API key refused"**: the key was deleted or mistyped. Create a new one,
+  paste it again.
+- **"No UniFi Protect Integration API at this address"**: Protect is not
+  installed on this console, or is older than version 6. Update it.
+- **"live events are interrupted"**: the states still follow, every minute;
+  the detections and rings wait for the link to come back. It reconnects by
+  itself.
+- **No image**: the integration resizes images of up to 4K; a progressive
+  JPEG larger than 1080p cannot be resized in the memory of the container.
+  The logs say so once.
+- **A doorbell without its ring feature**: ring it once, then click
+  **Update** on it in the **Discover** tab.
+- For more detail, set `LOG_LEVEL=debug` on the integration and read its
+  logs. They never contain your API key.
+
+## Limits
+
+- Developed without a console: tested against the payloads of the API, not
+  against real devices.
+- No control of recording, notifications, alarm, chimes or sirens: the
+  Integration API does not expose them cleanly, or a mistake would lower the
+  security of the house.
+- Audio detections (smoke alarm sound, glass break…), license plate text and
+  face identities are not used.
+- The list of detections of the widget starts empty at each restart: the
+  Integration API keeps no history of events.
+- Images are resized to 960 pixels wide at most (the limit of Gladys is
+  150 KB per image).

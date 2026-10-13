@@ -1,33 +1,62 @@
+// -----------------------------------------------------------------------------
+// The configuration, normalized: the console address, the key, the
+// certificate choice, the image interval, the language.
+// -----------------------------------------------------------------------------
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConfig, DEFAULT_CONFIG } from '../src/config.js';
+import { DEFAULT_CONFIG, hostOf, normalizeConfig, parseHost } from '../src/config.js';
 
-test('normalizeConfig returns the defaults when called with no argument', () => {
-  assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
+test('the console address: a host, an IP with a port, a URL copied from the browser', () => {
+  assert.equal(parseHost('192.0.2.1'), 'https://192.0.2.1');
+  assert.equal(parseHost(' unvr.local:8443 '), 'https://unvr.local:8443');
+  assert.equal(parseHost('https://192.0.2.1/protect/dashboard'), 'https://192.0.2.1');
+  assert.equal(parseHost('[2001:db8::1]'), 'https://[2001:db8::1]');
+  assert.equal(hostOf('https://192.0.2.1:8443'), '192.0.2.1:8443');
 });
 
-test('normalizeConfig keeps user values over the defaults', () => {
-  const config = normalizeConfig({ latitude: 45.5, longitude: -73.6, unit: 'fahrenheit' });
-  assert.equal(config.latitude, 45.5);
-  assert.equal(config.longitude, -73.6);
-  assert.equal(config.unit, 'fahrenheit');
+test('an address that cannot be used is refused', () => {
+  for (const raw of [
+    '',
+    '   ',
+    'http://192.0.2.1',
+    'ftp://x',
+    'https://user:pass@192.0.2.1',
+    'a b',
+    42,
+  ]) {
+    assert.equal(parseHost(raw), null, String(raw));
+  }
 });
 
-test('normalizeConfig coerces numeric strings coming from a form', () => {
-  const config = normalizeConfig({ latitude: '48.8', longitude: '2.3', poll_frequency: '600' });
-  assert.equal(config.latitude, 48.8);
-  assert.equal(config.longitude, 2.3);
-  assert.equal(config.poll_frequency, 600);
-  assert.equal(typeof config.poll_frequency, 'number');
+test('defaults: nothing configured, French names, images every 5 minutes, certificate checked', () => {
+  const config = normalizeConfig();
+  assert.equal(config.host, null);
+  assert.equal(config.hostInvalid, false);
+  assert.equal(config.apiKey, '');
+  assert.equal(config.allowSelfSigned, false);
+  assert.equal(config.snapshotIntervalMs, 5 * 60_000);
+  assert.equal(config.language, 'fr');
+  assert.equal(DEFAULT_CONFIG.language, 'fr');
 });
 
-test('normalizeConfig falls back to the default for a missing numeric field', () => {
-  const config = normalizeConfig({ unit: 'celsius' });
-  assert.equal(config.poll_frequency, DEFAULT_CONFIG.poll_frequency);
-});
-
-test('GLADYS_PREFER_LOCAL defaults to true and only an explicit false disables it', () => {
-  assert.equal(normalizeConfig().GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: true }).GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: false }).GLADYS_PREFER_LOCAL, false);
+test('values from the form are read safely', () => {
+  const config = normalizeConfig({
+    host: 'http://192.0.2.1',
+    api_key: '  key  ',
+    allow_self_signed: 'true',
+    snapshot_interval: '15',
+    language: 'es',
+  });
+  assert.equal(config.hostInvalid, true);
+  assert.equal(config.apiKey, 'key');
+  assert.equal(config.allowSelfSigned, true);
+  assert.equal(config.snapshotIntervalMs, 15 * 60_000);
+  assert.equal(config.language, 'es');
+  const odd = normalizeConfig({ snapshot_interval: '7', language: 'it', allow_self_signed: 1 });
+  assert.equal(odd.snapshotIntervalMs, 5 * 60_000);
+  assert.equal(odd.language, 'fr');
+  assert.equal(odd.allowSelfSigned, false);
+  assert.equal(normalizeConfig({ snapshot_interval: '0' }).snapshotIntervalMs, 0);
+  assert.equal(normalizeConfig(null).host, null);
 });

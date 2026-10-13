@@ -1,0 +1,272 @@
+[
+  {
+    "id": "66f1a2b3c4d5e6f708090c01",
+    "modelKey": "sensor",
+    "state": "CONNECTED",
+    "name": "Porte du jardin",
+    "mac": "F4E2C6000021",
+    "mountType": "door",
+    "batteryStatus": {
+      "percentage": 90,
+      "isLow": false
+    },
+    "stats": {
+      "light": {
+        "value": 12.0,
+        "status": "neutral"
+      },
+      "humidity": {
+        "value": 48.0,
+        "status": "neutral"
+      },
+      "temperature": {
+        "value": 21.37,
+        "status": "neutral"
+      }
+    },
+    "lightSettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": 1.0,
+      "highThreshold": 100.0
+    },
+    "humiditySettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": null,
+      "highThreshold": null
+    },
+    "temperatureSettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": null,
+      "highThreshold": null
+    },
+    "isOpened": true,
+    "openStatusChangedAt": null,
+    "isMotionDetected": false,
+    "motionDetectedAt": null,
+    "motionSettings": {
+      "isEnabled": true,
+      "sensitivity": 50,
+      "sensitivityWhenArmed": 80
+    },
+    "alarmTriggeredAt": null,
+    "alarmSettings": {
+      "isEnabled": false
+    },
+    "leakDetectedAt": null,
+    "externalLeakDetectedAt": null,
+    "leakSettings": {
+      "isInternalEnabled": false,
+      "isExternalEnabled": false
+    },
+    "tamperingDetectedAt": null,
+    "wirelessConnectionState": {
+      "signalState": {
+        "signalQuality": 80,
+        "signalStrength": -50
+      },
+      "batteryStatus": {
+        "percentage": 90,
+        "isLow": false
+      },
+      "bridge": "66f1a2b3c4d5e6f708090d01"
+    },
+    "type": "UP-Sense",
+    "featureFlags": {
+      "temperature": {
+        "channelCount": 1
+      },
+      "humidity": {
+        "channelCount": 1
+      },
+      "light": {
+        "channelCount": 1
+      },
+      "motion": {
+        "channelCount": 1
+      },
+      "open": {
+        "channelCount": 1
+      },
+      "tamper": {
+        "channelCount": 1
+      }
+    }
+  },
+  {
+    "id": "66f1a2b3c4d5e6f708090c02",
+    "modelKey": "sensor",
+    "state": "CONNECTED",
+    "name": "Cellier",
+    "mac": "F4E2C6000022",
+    "mountType": "leak",
+    "batteryStatus": {
+      "percentage": 61,
+      "isLow": false
+    },
+    "stats": {
+      "light": {
+        "value": null,
+        "status": "unknown"
+      },
+      "humidity": {
+        "value": null,
+        "status": "unknown"
+      },
+      "temperature": {
+        "value": null,
+        "status": "unknown"
+      }
+    },
+    "lightSettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": 1.0,
+      "highThreshold": 100.0
+    },
+    "humiditySettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": null,
+      "highThreshold": null
+    },
+    "temperatureSettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": null,
+      "highThreshold": null
+    },
+    "isOpened": false,
+    "openStatusChangedAt": null,
+    "isMotionDetected": false,
+    "motionDetectedAt": null,
+    "motionSettings": {
+      "isEnabled": true,
+      "sensitivity": 50,
+      "sensitivityWhenArmed": 80
+    },
+    "alarmTriggeredAt": null,
+    "alarmSettings": {
+      "isEnabled": false
+    },
+    "leakDetectedAt": null,
+    "externalLeakDetectedAt": null,
+    "leakSettings": {
+      "isInternalEnabled": true,
+      "isExternalEnabled": false
+    },
+    "tamperingDetectedAt": null,
+    "wirelessConnectionState": {
+      "signalState": {
+        "signalQuality": 80,
+        "signalStrength": -50
+      },
+      "batteryStatus": {
+        "percentage": 61,
+        "isLow": false
+      },
+      "bridge": "66f1a2b3c4d5e6f708090d01"
+    },
+    "type": "UP-Sense",
+    "featureFlags": {
+      "temperature": {
+        "channelCount": 1
+      },
+      "humidity": {
+        "channelCount": 1
+      },
+      "light": {
+        "channelCount": 1
+      },
+      "motion": {
+        "channelCount": 1
+      },
+      "open": {
+        "channelCount": 1
+      },
+      "tamper": {
+        "channelCount": 1
+      },
+      "waterLeak": {
+        "channelCount": 1
+      }
+    }
+  },
+  {
+    "id": "66f1a2b3c4d5e6f708090c03",
+    "modelKey": "sensor",
+    "state": "CONNECTED",
+    "name": "Fenêtre du salon",
+    "mac": "F4E2C6000023",
+    "mountType": "window",
+    "batteryStatus": {
+      "percentage": 90,
+      "isLow": false
+    },
+    "stats": {
+      "light": {
+        "value": 12.0,
+        "status": "neutral"
+      },
+      "humidity": {
+        "value": 48.0,
+        "status": "neutral"
+      },
+      "temperature": {
+        "value": 21.37,
+        "status": "neutral"
+      }
+    },
+    "lightSettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": 1.0,
+      "highThreshold": 100.0
+    },
+    "humiditySettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": null,
+      "highThreshold": null
+    },
+    "temperatureSettings": {
+      "isEnabled": true,
+      "margin": 1,
+      "lowThreshold": null,
+      "highThreshold": null
+    },
+    "isOpened": false,
+    "openStatusChangedAt": null,
+    "isMotionDetected": false,
+    "motionDetectedAt": null,
+    "motionSettings": {
+      "isEnabled": true,
+      "sensitivity": 50,
+      "sensitivityWhenArmed": 80
+    },
+    "alarmTriggeredAt": null,
+    "alarmSettings": {
+      "isEnabled": false
+    },
+    "leakDetectedAt": null,
+    "externalLeakDetectedAt": null,
+    "leakSettings": {
+      "isInternalEnabled": false,
+      "isExternalEnabled": false
+    },
+    "tamperingDetectedAt": null,
+    "wirelessConnectionState": {
+      "signalState": {
+        "signalQuality": 80,
+        "signalStrength": -50
+      },
+      "batteryStatus": {
+        "percentage": 90,
+        "isLow": false
+      },
+      "bridge": "66f1a2b3c4d5e6f708090d01"
+    }
+  }
+]

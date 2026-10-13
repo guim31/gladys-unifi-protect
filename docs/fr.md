@@ -1,67 +1,245 @@
-# Template de démonstration
+# UniFi Protect
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Amène dans Gladys les caméras, sonnettes, projecteurs et capteurs d'une
+console UniFi Protect (UDM, UCG, UNVR, Cloud Key), **en local** : mouvement
+et détections intelligentes (personne, véhicule, animal, colis), images des
+caméras, appuis sur la sonnette, commande des projecteurs, détecteurs
+d'ouverture, température, humidité, luminosité, fuites d'eau, batteries. Tout
+passe par l'API officielle « Integration » de Protect, sur votre console :
+aucun compte cloud Ubiquiti, rien ne sort de votre réseau.
 
-## Ce que vous obtenez
+> **Développée sans le matériel : vos retours sont les bienvenus.** Cette
+> intégration a été écrite d'après la spécification officielle de l'API et
+> des réponses réelles, sans console Protect sous la main. Si quelque chose ne
+> marche pas comme décrit, ouvrez un ticket sur
+> [github.com/guim31/gladys-unifi-protect/issues](https://github.com/guim31/gladys-unifi-protect/issues)
+> avec les logs de l'intégration (`LOG_LEVEL=debug`).
+>
+> Cette intégration n'est pas affiliée à Ubiquiti. UniFi et UniFi Protect sont
+> des marques d'Ubiquiti Inc.
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+## Ce qu'il vous faut
 
-## Configuration
+- Une console UniFi avec **UniFi Protect 6 ou plus** (l'API Integration ; 7.x
+  conseillé) : Dream Machine, Cloud Gateway, UNVR, Cloud Key Gen2+…
+- Une **clé d'API** créée dans la console (voir plus bas). Un utilisateur sans
+  droits d'administration sur Protect peut obtenir une clé qui ne voit rien.
+- Gladys **5.1 ou plus**, capable de joindre la console en HTTPS (port 443 par
+  défaut) sur votre réseau.
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+## Mise en place
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+### Créer une clé d'API
 
-## Actions
+1. Ouvrez votre console UniFi en local dans un navigateur (par exemple
+   `https://192.168.1.1`).
+2. Allez dans **Settings**, **Control Plane**, **Integrations**.
+3. Créez une clé d'API, donnez-lui un nom (par exemple « Gladys ») et
+   copiez-la : la console ne l'affiche qu'une fois.
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+### Réglages
 
-## Scènes
+Dans Gladys, ouvrez l'intégration, puis son onglet **Configuration** :
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+- **Adresse de la console** : l'adresse IP ou le nom de la console, avec
+  `:port` si ce n'est pas 443. Une URL copiée depuis le navigateur convient
+  aussi.
+- **Clé d'API** : la clé que vous venez de créer. Elle n'est envoyée qu'à
+  votre console.
+- **Accepter le certificat auto-signé** : les consoles UniFi présentent un
+  certificat auto-signé, ce dont un navigateur avertit. Cochez cette case pour
+  l'accepter, sauf si votre console a un certificat reconnu par votre réseau.
+  La case est décochée par défaut : accepter un certificat invérifiable doit
+  être votre choix.
+- **Images des caméras** : fréquence de rafraîchissement de l'image de chaque
+  caméra ajoutée à Gladys (toutes les 5 minutes par défaut, ou seulement à la
+  détection). Détections, sonnerie et vue en direct demandent toujours une
+  image neuve.
+- **Langue des noms** : la langue des noms de fonctionnalités et des textes
+  envoyés aux scènes (français par défaut). Les noms sont fixés à l'ajout d'un
+  appareil dans Gladys.
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+Enregistrez : l'état sous le nom de l'intégration passe à connecté, et les
+appareils apparaissent dans l'onglet **Découverte**. Ajoutez ceux que vous
+voulez.
+
+### Actions de la configuration
+
+- **Tester la connexion** : lit la console tout de suite et affiche sa version
+  de Protect, son nombre de caméras, projecteurs et capteurs, et l'empreinte
+  SHA-256 du certificat accepté (comparez-la avec celle que votre navigateur
+  montre pour la console).
+- **Afficher l'adresse du flux vidéo** : choisissez une caméra, et l'adresse
+  RTSP de son flux vidéo s'affiche sous le bouton, prête pour l'intégration
+  « Caméra RTSP » de Gladys (voir [Vidéo en direct](#vidéo-en-direct)).
+
+## Les appareils
+
+### Caméras
+
+Un appareil par caméra, nommé comme dans Protect :
+
+- **Image** : l'image de la caméra, rafraîchie à l'intervalle choisi, à chaque
+  détection et sonnerie, et chaque fois que vous l'ouvrez au tableau de bord ;
+- **En ligne** : allumé tant que la caméra est connectée à la console ;
+- **Mouvement** : allumé tant que Protect voit du mouvement ;
+- **Personne**, **Véhicule**, **Animal**, **Colis** : allumés pendant une
+  détection intelligente de ce type — seulement les types que votre caméra
+  sait détecter. Un colis est signalé une seule fois par Protect : la
+  fonctionnalité s'allume 10 secondes.
+
+### Sonnettes
+
+Une sonnette est une caméra avec une fonctionnalité de plus, **Sonnette** :
+elle s'allume 10 secondes à chaque appui, et Gladys affiche quand on a sonné
+pour la dernière fois. Une sonnette que la console ne nomme pas comme telle
+(ancien firmware) reçoit cette fonctionnalité à son premier appui : cliquez
+sur **Mettre à jour** sur elle dans l'onglet **Découverte**.
+
+### Projecteurs
+
+- **Éclairage** : l'allumer force la lumière ; l'éteindre la rend à son propre
+  mode d'éclairage (mouvement, horaire…) — elle peut rester allumée jusqu'à
+  la fin de sa minuterie. L'état affiché est l'état réel de la lumière, quoi
+  qui l'ait allumée.
+- **Mouvement** : le détecteur de mouvement du projecteur.
+- **En ligne**.
+
+### Capteurs
+
+Les capteurs UP-Sense reçoivent les fonctionnalités que permet leur pose :
+
+- **Ouverture** : ouvert ou fermé, pour un capteur posé sur une porte, une
+  fenêtre ou une porte de garage ;
+- **Température** (°C), **Humidité** (%), **Luminosité** (lux),
+  **Mouvement** ;
+- **Fuite d'eau**, pour un capteur posé en détecteur de fuite ;
+- **Batterie** (%) ;
+- **En ligne**.
 
 ## Tableau de bord
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Le widget **UniFi Protect** montre d'un coup d'œil :
+
+- les caméras en ligne (3/4) et les détections des dernières 24 heures ;
+- les dernières détections et sonneries, de la plus récente à la plus
+  ancienne, chacune avec l'image prise à ce moment-là ;
+- l'état de chaque caméra, et les projecteurs et capteurs hors ligne, s'il y
+  en a.
+
+Dans ses réglages, choisissez une caméra pour n'afficher qu'elle. Les
+détections sont gardées en mémoire : la liste repart vide après un
+redémarrage de l'intégration.
+
+## Scènes
+
+### Déclencheurs
+
+- **Objet détecté par une caméra** : une détection intelligente de Protect.
+  Filtres : la caméra, et ce qui est détecté (personne, véhicule, animal,
+  colis, plaque d'immatriculation, visage) ; laissés vides, tout correspond.
+  Une détection qui voit une personne, puis un véhicule, lance la scène une
+  fois pour chacun. Les actions peuvent utiliser le nom de la caméra et le
+  type d'objet (code `person`, ou son nom dans la langue de l'intégration).
+  Quand la scène démarre, l'image de la caméra dans Gladys est déjà celle de
+  la détection.
+- **Quelqu'un sonne à la porte** : on a appuyé sur une sonnette. Filtre : la
+  sonnette. Les actions peuvent utiliser son nom. L'image de la sonnette dans
+  Gladys est déjà celle de l'appui.
+
+Les états des appareils (mouvement, personne, ouverture, température…)
+servent aussi au déclencheur habituel « changement d'état d'un appareil » de
+Gladys.
+
+### Actions
+
+- **Rafraîchir l'image d'une caméra** : prend une image neuve d'une caméra
+  pour Gladys, pour que l'action suivante (« envoyer une image de caméra »
+  dans un message) envoie ce que la caméra voit maintenant.
+- **Afficher un message sur la sonnette** : change le message de l'écran de
+  la sonnette : ne pas déranger, laisser le colis devant la porte, votre
+  propre texte (30 caractères au plus), ou l'efface — pour un nombre de
+  minutes, ou jusqu'au prochain changement (0).
+
+Aucune action n'arme, ne désarme, ne coupe ni n'arrête l'enregistrement de
+quoi que ce soit : l'API Integration de Protect ne donne accès ni au mode
+d'enregistrement ni aux notifications, et rien dans Gladys ne doit pouvoir
+baisser la sécurité de la maison par erreur.
+
+### Idées de scènes
+
+- **On sonne** : déclencheur « Quelqu'un sonne à la porte », puis « envoyer
+  une image de caméra » de la sonnette sur votre téléphone avec le message
+  « Quelqu'un à la porte ».
+- **Une personne dans l'allée la nuit** : déclencheur « Objet détecté par une
+  caméra » (caméra Allée, Personne), une condition sur l'heure, puis allumer
+  l'éclairage du jardin 5 minutes.
+- **Un colis a été livré** : déclencheur « Objet détecté par une caméra »
+  (Colis), puis un message « Un colis a été livré » avec l'image.
+- **Absent de la maison** : quand la maison se vide, « Afficher un message
+  sur la sonnette » (laisser le colis devant la porte, durée 0) ; à votre
+  retour, l'effacer.
+- **Fuite d'eau** : déclencheur « changement d'état » sur la fonctionnalité
+  **Fuite d'eau**, puis une alerte sur tous les téléphones.
+
+## Vidéo en direct
+
+La fonctionnalité **Image** montre des images fixes. Pour la vidéo en direct,
+utilisez l'intégration « Caméra RTSP » de Gladys :
+
+1. Dans Protect, ouvrez les réglages de la caméra, **Avancé**, et activez un
+   flux **RTSP** (haute, moyenne ou basse qualité).
+2. Dans Gladys, lancez **Afficher l'adresse du flux vidéo** avec cette
+   caméra.
+3. Ajoutez la caméra dans l'intégration « Caméra RTSP » avec cette adresse
+   (`rtsp://<console>:7447/…`).
+
+L'adresse vaut mot de passe du flux : ne la partagez avec personne.
+
+## Rafraîchissement et limites de l'API
+
+Gladys n'interroge jamais ces appareils : l'intégration suit la console en
+direct par deux WebSockets de l'API Integration (appareils et événements), et
+relit l'état complet toutes les 5 minutes (chaque minute tant que le lien en
+direct est coupé). Les valeurs ne sont envoyées à Gladys que quand elles
+changent, et de nouveau toutes les 6 heures sinon.
+
+Images : au plus une image toutes les 6 secondes par caméra (Gladys en
+accepte 12 par minute), lues une caméra après l'autre. La console limite
+l'API à environ 10 requêtes par seconde ; l'intégration en reste très loin.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« La console ne répond pas »** : vérifiez l'adresse, que la console est
+  allumée, et que Gladys peut la joindre (même réseau, pare-feu).
+- **« certificat auto-signé »** : cochez **Accepter le certificat
+  auto-signé**.
+- **« Clé d'API refusée »** : la clé a été supprimée ou mal recopiée.
+  Créez-en une nouvelle, collez-la à nouveau.
+- **« Pas d'API Integration UniFi Protect à cette adresse »** : Protect n'est
+  pas installé sur cette console, ou date d'avant la version 6. Mettez-le à
+  jour.
+- **« les événements en direct sont coupés »** : les états suivent toujours,
+  chaque minute ; les détections et la sonnerie attendent le retour du lien.
+  Il se reconnecte tout seul.
+- **Pas d'image** : l'intégration redimensionne les images jusqu'à la 4K ; un
+  JPEG progressif plus grand que du 1080p ne peut pas l'être dans la mémoire
+  du conteneur. Les logs le disent une fois.
+- **Une sonnette sans sa fonctionnalité de sonnerie** : sonnez une fois, puis
+  cliquez sur **Mettre à jour** sur elle dans l'onglet **Découverte**.
+- Pour plus de détail, réglez `LOG_LEVEL=debug` sur l'intégration et lisez ses
+  logs. Ils ne contiennent jamais votre clé d'API.
+
+## Limites
+
+- Développée sans console : testée sur les réponses de l'API, pas sur de vrais
+  appareils.
+- Pas de commande de l'enregistrement, des notifications, de l'alarme, des
+  carillons ni des sirènes : l'API Integration ne les expose pas proprement,
+  ou une erreur baisserait la sécurité de la maison.
+- Les détections sonores (alarme de fumée, bris de vitre…), le texte des
+  plaques et l'identité des visages ne sont pas utilisés.
+- La liste des détections du widget repart vide à chaque redémarrage : l'API
+  Integration ne garde pas d'historique des événements.
+- Les images sont réduites à 960 pixels de large au plus (la limite de Gladys
+  est de 150 Ko par image).
