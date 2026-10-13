@@ -1,0 +1,20 @@
+[
+  {
+    "type": "add",
+    "item": {
+      "id": "67a0000000000000000000e2",
+      "modelKey": "event",
+      "type": "motion",
+      "start": 1735690000000,
+      "device": "66f1a2b3c4d5e6f708090a02"
+    }
+  },
+  {
+    "type": "update",
+    "item": {
+      "id": "67a0000000000000000000e2",
+      "modelKey": "event",
+      "end": 1735690008000
+    }
+  }
+]

@@ -8,16 +8,20 @@ contributors.
 A Gladys Assistant **external integration**: a Node.js service (Node 22+, ESM,
 no build step) that runs in its own sandboxed Docker container and talks to
 Gladys through
-[`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js),
-its only runtime dependency. It started from the official JavaScript template.
+[`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js).
+It started from the official JavaScript template. Runtime dependencies: the SDK,
+`ws` (already the SDK's own transport) and `jpeg-js` (pure JavaScript).
+
+It brings the cameras, doorbells, floodlights and sensors of a UniFi Protect
+console into Gladys, over the official Protect Integration API (API key).
 
 ## Commands
 
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "ring"    # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -31,16 +35,26 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+index.js                          SDK wiring only: src/app.js registers the handlers before connect()
+src/app.js                        every SDK handler -> the hub (also used by the tests)
+src/hub.js                        the console: REST reads, sockets, states, pulses, images, triggers, commands, logs
+src/devices.js                    Gladys devices (camera, floodlight, sensor), feature names (4 languages), values
+src/protect/client.js             Integration API client (X-API-KEY), errors by kind
+src/protect/http.js               node:https request (self-signed certificate on request, fingerprint)
+src/protect/socket.js             one subscription WebSocket (ws): reconnection, ping
+src/protect/model.js              payload parsing, partial/bulk frames, detection events
+src/image.js                      snapshot -> camera image <= 150 KB (worker, one at a time)
+src/image-worker.js               the conversion: scaled decode, shrink, jpeg-js encode
+src/jpeg-scaled.js                baseline JPEG decoder straight to 1/2, 1/4, 1/8 (memory)
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    dashboard widget `protect` (manifest `widgets`)
+src/texts.js                      status, error, report and action texts (4 languages)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+src/store.js                      /data/protect-state.json (cameras seen ringing)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (en and fr mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+                                  and helpers/fakeProtect.js (built from test/fixtures/protect)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +84,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, widget content, feature names, manifest texts, and
+  `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md`, kept in sync
+  (`test/i18n.test.js` checks the languages and the doc sections).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +249,50 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## UniFi Protect : l'API et les pièges de cette intégration
+
+**L'API Integration** (officielle, sur la console) : `https://<console>/proxy/protect/integration/v1/…`,
+en-tête `X-API-KEY`, clé créée dans Settings → Control Plane → Integrations. Les formes viennent des
+modèles « public » et des tests de `uilibs/uiprotect` (validés contre l'OpenAPI de Protect 7.3.70) :
+le portail `developer.ui.com` et `fw-update.ubnt.com` sont refusés par le proxy des sessions de code.
+
+- `GET /v1/meta/info`, `/v1/cameras`, `/v1/lights`, `/v1/sensors` ; `GET /v1/cameras/{id}/snapshot`
+  (`highQuality`, `channel=package`, **ni largeur ni hauteur**) ; `GET …/rtsps-stream` ; `PATCH`
+  d'une caméra (`lcdMessage`, OSD, LED, détections…) et d'un projecteur (`isLightForceEnabled`).
+  **Ni mode d'enregistrement, ni notifications, ni confidentialité** dans cette API : pas d'action de
+  scène « activer l'enregistrement » possible. Limite observée par uiprotect : ~10 requêtes/s.
+- WebSockets `…/v1/subscribe/devices` et `…/v1/subscribe/events`, même clé, **rien à l'ouverture** :
+  relire le REST à chaque (re)connexion. Trames `{ type: add|update|remove, item }`, un `update` ne
+  porte que les champs changés (objets imbriqués partiels : fusion récursive), et `item.id` peut être
+  une **liste** (trame groupée : un même contenu pour plusieurs appareils).
+- Événements : une détection s'ouvre (`add`, `end` absent), gagne des `smartDetectTypes`, se ferme
+  (`update` avec `end`, parfois **répété**). Un **colis arrive fermé en un seul `update`** jamais vu
+  (« born closed »). `ring` et `lightMotion` sont instantanés. Un `end` perdu pendant une coupure
+  laisse une détection ouverte : tout fermer à la réouverture du socket d'événements, et après 30 min.
+- La caméra publique n'a **ni `isDoorbell` ni `featureFlags.hasChime`** : sonnette = `type` contenant
+  « doorbell » (firmware récent), sinon apprise au premier `ring` (mémorisée dans `/data`).
+- Capteurs : `featureFlags` absent (7.1.69) ou `null` (UP-AirQuality 7.2) ; une pose `leak` supprime
+  température, humidité, lumière et mouvement. `isOpened` → `opening-sensor` **inversé** (0 = ouvert).
+- Projecteur : on ne commande que `isLightForceEnabled` ; l'état réel est `isLightOn`.
+
+**Images** : Gladys plafonne une image de caméra à **150 Ko mesurés sur toute la chaîne
+`image/jpg;base64,…`** (constante `MAX_CAMERA_IMAGE_SIZE` du SDK), soit ~112 Ko de JPEG. jpeg-js
+décode en gardant chaque bloc 8×8 dans son propre `Int32Array` : **~50 octets par pixel** (+110 Mo
+en 1080p, +370 Mo en 4K) dans une sandbox de 256 Mo. D'où `src/jpeg-scaled.js`, décodeur baseline
+qui réduit chaque bloc au vol (1/2, 1/4, 1/8 ; la chrominance sous-échantillonnée est moins réduite),
+vérifié contre jpeg-js sur des fichiers Pillow (4:2:0 avec marqueurs de reprise, 4:2:2, 4:4:4, gris) ;
+jpeg-js ne sert qu'à encoder et aux JPEG progressifs jusqu'en 1080p. La conversion tourne dans un
+`Worker` terminé après chaque image (mémoire rendue tout de suite, boucle d'événements libre).
+
+**Divers**
+
+- Un état « en ligne » en `presence-sensor/binary` s'afficherait « Présence détectée » sur une caméra :
+  `input/binary` (On/Off) à la place.
+- `publishCameraImage` seulement pour les appareils ajoutés (`gladys.devices`), comme les états.
+- Dans le faux Gladys, l'ack d'une action ou d'un widget est `data.message` (objet multilingue), et
+  `fake.transports` porte `device_external_id`.
+- L'onglet s'appelle **« Discover »** en anglais (« Découverte », « Entdecken », « Descubrir ») et son
+  bouton « Update » / « Mettre à jour » / « Aktualisieren » / « Actualizar ».
+- La garde allemande attrape aussi « Sie » = « elle/ils » en début de phrase : reformuler (« Diese… »),
+  ne pas affaiblir la garde.

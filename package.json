@@ -1,8 +1,8 @@
 {
-  "name": "gladys-integration-template-js",
+  "name": "gladys-unifi-protect",
   "version": "1.0.0",
   "private": true,
-  "description": "Official starter template to build an external integration for Gladys Assistant with the JavaScript SDK.",
+  "description": "UniFi Protect integration for Gladys Assistant: cameras, doorbells, floodlights and sensors over the local Integration API.",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -16,7 +16,9 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@gladysassistant/integration-sdk": "^0.15.0"
+    "@gladysassistant/integration-sdk": "^0.15.0",
+    "jpeg-js": "^0.4.4",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,0 +1,12 @@
+[
+  {
+    "type": "add",
+    "item": {
+      "id": "67a0000000000000000000e4",
+      "modelKey": "event",
+      "type": "ring",
+      "start": 1735690000000,
+      "device": "66f1a2b3c4d5e6f708090a01"
+    }
+  }
+]

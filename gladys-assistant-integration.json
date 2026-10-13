@@ -1,177 +1,528 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "UniFi Protect",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "UniFi Protect cameras, doorbells, floodlights and sensors, locally: detections, images, rings.",
+    "fr": "Caméras, sonnettes, projecteurs et capteurs UniFi Protect en local : détections, images, sonnerie.",
+    "de": "UniFi-Protect-Kameras, Türklingeln, Flutlichter und Sensoren lokal: Erkennungen, Bilder, Klingeln.",
+    "es": "Cámaras, timbres, focos y sensores UniFi Protect en local: detecciones, imágenes, timbre."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-unifi-protect:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-unifi-protect/main/cover.png",
+  "categories": ["security"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your UniFi console",
+        "fr": "Votre console UniFi",
+        "de": "Deine UniFi-Konsole",
+        "es": "Su consola UniFi"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "UniFi Protect 6 or later. In the console, create an API key: Settings, Control Plane, Integrations. Everything stays on your network.",
+        "fr": "UniFi Protect 6 ou plus. Dans la console, créez une clé d'API : Settings, Control Plane, Integrations. Tout reste sur votre réseau.",
+        "de": "UniFi Protect 6 oder neuer. Erstelle in der Konsole einen API-Schlüssel: Settings, Control Plane, Integrations. Alles bleibt in deinem Netzwerk.",
+        "es": "UniFi Protect 6 o posterior. En la consola, cree una clave de API: Settings, Control Plane, Integrations. Todo se queda en su red."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://developer.ui.com/protect/",
+          "label": {
+            "en": "UniFi Protect Integration API",
+            "fr": "API Integration de UniFi Protect",
+            "de": "UniFi-Protect-Integration-API",
+            "es": "API Integration de UniFi Protect"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "host",
+      "type": "string",
+      "label": {
+        "en": "Console address",
+        "fr": "Adresse de la console",
+        "de": "Adresse der Konsole",
+        "es": "Dirección de la consola"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
+      "description": {
+        "en": "IP address or name of the console (UDM, UCG, UNVR, Cloud Key), with :port if not 443.",
+        "fr": "Adresse IP ou nom de la console (UDM, UCG, UNVR, Cloud Key), avec :port si ce n'est pas 443.",
+        "de": "IP-Adresse oder Name der Konsole (UDM, UCG, UNVR, Cloud Key), mit :Port, falls nicht 443.",
+        "es": "Dirección IP o nombre de la consola (UDM, UCG, UNVR, Cloud Key), con :puerto si no es 443."
+      },
+      "placeholder": {
+        "en": "e.g. 192.168.1.1",
+        "fr": "ex. 192.168.1.1",
+        "de": "z. B. 192.168.1.1",
+        "es": "p. ej. 192.168.1.1"
+      },
       "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "default": ""
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "api_key",
+      "type": "secret",
+      "label": {
+        "en": "API key",
+        "fr": "Clé d'API",
+        "de": "API-Schlüssel",
+        "es": "Clave de API"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "The key created in the console. It is sent to the console only, never to a cloud.",
+        "fr": "La clé créée dans la console. Elle n'est envoyée qu'à la console, jamais à un cloud.",
+        "de": "Der in der Konsole erstellte Schlüssel. Er geht nur an die Konsole, nie an eine Cloud.",
+        "es": "La clave creada en la consola. Solo se envía a la consola, nunca a una nube."
+      },
+      "required": true
     },
     {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "key": "allow_self_signed",
+      "type": "boolean",
+      "label": {
+        "en": "Accept the self-signed certificate",
+        "fr": "Accepter le certificat auto-signé",
+        "de": "Selbstsigniertes Zertifikat akzeptieren",
+        "es": "Aceptar el certificado autofirmado"
+      },
+      "description": {
+        "en": "UniFi consoles serve a self-signed certificate: tick this box, unless yours has a certificate your network trusts.",
+        "fr": "Les consoles UniFi présentent un certificat auto-signé : cochez cette case, sauf si la vôtre a un certificat reconnu.",
+        "de": "UniFi-Konsolen nutzen ein selbstsigniertes Zertifikat: Aktiviere dies, außer deine hat ein anerkanntes Zertifikat.",
+        "es": "Las consolas UniFi presentan un certificado autofirmado: marque esta casilla, salvo si la suya tiene uno reconocido."
+      },
       "required": false,
-      "default": "celsius",
+      "default": false
+    },
+    {
+      "key": "snapshot_interval",
+      "type": "select",
+      "label": {
+        "en": "Camera images",
+        "fr": "Images des caméras",
+        "de": "Kamerabilder",
+        "es": "Imágenes de las cámaras"
+      },
+      "description": {
+        "en": "How often the image of each camera added to Gladys is refreshed. Detections and rings always send a fresh one.",
+        "fr": "Fréquence de rafraîchissement de l'image des caméras ajoutées. Détections et sonnerie en envoient toujours une neuve.",
+        "de": "Wie oft das Bild jeder hinzugefügten Kamera erneuert wird. Erkennungen und Klingeln senden immer ein neues.",
+        "es": "Frecuencia de actualización de la imagen de las cámaras añadidas. Detecciones y timbre siempre envían una nueva."
+      },
+      "required": false,
+      "default": "5",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "0",
+          "label": {
+            "en": "Only on detection",
+            "fr": "Seulement à la détection",
+            "de": "Nur bei Erkennung",
+            "es": "Solo al detectar"
+          }
+        },
+        {
+          "value": "1",
+          "label": {
+            "en": "Every minute",
+            "fr": "Chaque minute",
+            "de": "Jede Minute",
+            "es": "Cada minuto"
+          }
+        },
+        {
+          "value": "5",
+          "label": {
+            "en": "Every 5 minutes",
+            "fr": "Toutes les 5 minutes",
+            "de": "Alle 5 Minuten",
+            "es": "Cada 5 minutos"
+          }
+        },
+        {
+          "value": "15",
+          "label": {
+            "en": "Every 15 minutes",
+            "fr": "Toutes les 15 minutes",
+            "de": "Alle 15 Minuten",
+            "es": "Cada 15 minutos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "Every hour",
+            "fr": "Toutes les heures",
+            "de": "Jede Stunde",
+            "es": "Cada hora"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the names",
+        "fr": "Langue des noms",
+        "de": "Sprache der Namen",
+        "es": "Idioma de los nombres"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Language of the feature names and of the texts sent to scenes. Names are set when a device is added.",
+        "fr": "Langue des noms de fonctionnalités et des textes envoyés aux scènes. Les noms sont fixés à l'ajout d'un appareil.",
+        "de": "Sprache der Funktionsnamen und der Texte für Szenen. Die Namen werden beim Hinzufügen festgelegt.",
+        "es": "Idioma de los nombres de funciones y de los textos enviados a las escenas. Se fijan al añadir un dispositivo."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": { "en": "English", "fr": "English", "de": "English", "es": "English" }
+        },
+        {
+          "value": "fr",
+          "label": { "en": "Français", "fr": "Français", "de": "Français", "es": "Français" }
+        },
+        {
+          "value": "de",
+          "label": { "en": "Deutsch", "fr": "Deutsch", "de": "Deutsch", "es": "Deutsch" }
+        },
+        {
+          "value": "es",
+          "label": { "en": "Español", "fr": "Español", "de": "Español", "es": "Español" }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
       "timeout_seconds": 30
     },
     {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "stream_url",
+      "label": {
+        "en": "Show the video stream address",
+        "fr": "Afficher l'adresse du flux vidéo",
+        "de": "Adresse des Videostreams anzeigen",
+        "es": "Mostrar la dirección del flujo de vídeo"
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
+          "key": "camera",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" }
         }
       ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "object_detected",
+      "label": {
+        "en": "Object detected by a camera",
+        "fr": "Objet détecté par une caméra",
+        "de": "Objekt von einer Kamera erkannt",
+        "es": "Objeto detectado por una cámara"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A smart detection of UniFi Protect: a person, a vehicle, an animal, a package… The camera image is fresh.",
+        "fr": "Une détection intelligente de UniFi Protect : personne, véhicule, animal, colis… L'image de la caméra est à jour.",
+        "de": "Eine intelligente Erkennung von UniFi Protect: Person, Fahrzeug, Tier, Paket… Das Kamerabild ist aktuell.",
+        "es": "Una detección inteligente de UniFi Protect: persona, vehículo, animal, paquete… La imagen de la cámara está al día."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "camera",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" }
         },
         {
-          "key": "target",
+          "key": "object",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "What was detected",
+            "fr": "Ce qui est détecté",
+            "de": "Was erkannt wurde",
+            "es": "Lo detectado"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "person",
+              "label": { "en": "Person", "fr": "Personne", "de": "Person", "es": "Persona" }
+            },
+            {
+              "value": "vehicle",
+              "label": { "en": "Vehicle", "fr": "Véhicule", "de": "Fahrzeug", "es": "Vehículo" }
+            },
+            {
+              "value": "animal",
+              "label": { "en": "Animal", "fr": "Animal", "de": "Tier", "es": "Animal" }
+            },
+            {
+              "value": "package",
+              "label": { "en": "Package", "fr": "Colis", "de": "Paket", "es": "Paquete" }
+            },
+            {
+              "value": "license_plate",
+              "label": {
+                "en": "License plate",
+                "fr": "Plaque d'immatriculation",
+                "de": "Kennzeichen",
+                "es": "Matrícula"
+              }
+            },
+            {
+              "value": "face",
+              "label": { "en": "Face", "fr": "Visage", "de": "Gesicht", "es": "Cara" }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "camera_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Camera name",
+            "fr": "Nom de la caméra",
+            "de": "Name der Kamera",
+            "es": "Nombre de la cámara"
+          }
+        },
+        {
+          "key": "object",
+          "type": "string",
+          "label": {
+            "en": "Object type (code)",
+            "fr": "Type d'objet (code)",
+            "de": "Objekttyp (Code)",
+            "es": "Tipo de objeto (código)"
+          }
+        },
+        {
+          "key": "object_name",
+          "type": "string",
+          "label": {
+            "en": "Object type (name)",
+            "fr": "Type d'objet (nom)",
+            "de": "Objekttyp (Name)",
+            "es": "Tipo de objeto (nombre)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "doorbell_rang",
+      "label": {
+        "en": "Someone rang the doorbell",
+        "fr": "Quelqu'un sonne à la porte",
+        "de": "Jemand klingelt an der Tür",
+        "es": "Alguien llama al timbre"
+      },
+      "description": {
+        "en": "A UniFi Protect doorbell was pressed. The doorbell camera image is fresh.",
+        "fr": "Une sonnette UniFi Protect a été pressée. L'image de sa caméra est à jour.",
+        "de": "Eine UniFi-Protect-Türklingel wurde gedrückt. Das Bild ihrer Kamera ist aktuell.",
+        "es": "Se ha pulsado un timbre UniFi Protect. La imagen de su cámara está al día."
+      },
+      "fields": [
+        {
+          "key": "doorbell",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Doorbell", "fr": "Sonnette", "de": "Türklingel", "es": "Timbre" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "doorbell_name",
+          "type": "string",
+          "label": {
+            "en": "Doorbell name",
+            "fr": "Nom de la sonnette",
+            "de": "Name der Türklingel",
+            "es": "Nombre del timbre"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "refresh_snapshot",
+      "label": {
+        "en": "Refresh a camera image",
+        "fr": "Rafraîchir l'image d'une caméra",
+        "de": "Kamerabild aktualisieren",
+        "es": "Actualizar la imagen de una cámara"
+      },
       "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+        "en": "Takes a fresh image of the camera for Gladys, to send it in a message right after.",
+        "fr": "Prend une image neuve de la caméra pour Gladys, à envoyer ensuite dans un message.",
+        "de": "Nimmt ein neues Bild der Kamera für Gladys auf, um es danach in einer Nachricht zu senden.",
+        "es": "Toma una imagen nueva de la cámara para Gladys, para enviarla después en un mensaje."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "set_doorbell_message",
+      "label": {
+        "en": "Show a message on the doorbell",
+        "fr": "Afficher un message sur la sonnette",
+        "de": "Nachricht auf der Türklingel anzeigen",
+        "es": "Mostrar un mensaje en el timbre"
+      },
+      "description": {
+        "en": "Changes the message of the doorbell screen, for a while or until changed, or clears it.",
+        "fr": "Change le message de l'écran de la sonnette, pour un temps ou jusqu'au prochain changement, ou l'efface.",
+        "de": "Ändert die Nachricht auf dem Bildschirm der Türklingel, für eine Weile oder dauerhaft, oder löscht sie.",
+        "es": "Cambia el mensaje de la pantalla del timbre, por un tiempo o hasta el próximo cambio, o lo borra."
       },
       "timeout_seconds": 15,
       "fields": [
         {
-          "key": "device",
+          "key": "doorbell",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": { "en": "Doorbell", "fr": "Sonnette", "de": "Türklingel", "es": "Timbre" },
           "required": true
-        }
-      ],
-      "outputs": [
+        },
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "message",
+          "type": "select",
+          "label": { "en": "Message", "fr": "Message", "de": "Nachricht", "es": "Mensaje" },
+          "required": true,
+          "default": "do_not_disturb",
+          "options": [
+            {
+              "value": "do_not_disturb",
+              "label": {
+                "en": "Do not disturb",
+                "fr": "Ne pas déranger",
+                "de": "Bitte nicht stören",
+                "es": "No molestar"
+              }
+            },
+            {
+              "value": "leave_package",
+              "label": {
+                "en": "Leave the package at the door",
+                "fr": "Laisser le colis devant la porte",
+                "de": "Paket vor der Tür abstellen",
+                "es": "Dejar el paquete en la puerta"
+              }
+            },
+            {
+              "value": "custom",
+              "label": {
+                "en": "My own text",
+                "fr": "Mon propre texte",
+                "de": "Eigener Text",
+                "es": "Mi propio texto"
+              }
+            },
+            {
+              "value": "clear",
+              "label": {
+                "en": "Clear the message",
+                "fr": "Effacer le message",
+                "de": "Nachricht löschen",
+                "es": "Borrar el mensaje"
+              }
+            }
+          ]
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "label": {
+            "en": "Text (my own text)",
+            "fr": "Texte (mon propre texte)",
+            "de": "Text (eigener Text)",
+            "es": "Texto (mi propio texto)"
+          },
+          "description": {
+            "en": "30 characters at most.",
+            "fr": "30 caractères au plus.",
+            "de": "Höchstens 30 Zeichen.",
+            "es": "30 caracteres como máximo."
+          },
+          "required": false
+        },
+        {
+          "key": "duration",
+          "type": "number",
+          "label": {
+            "en": "Duration (minutes, 0: until changed)",
+            "fr": "Durée (minutes, 0 : jusqu'au changement)",
+            "de": "Dauer (Minuten, 0: bis zur Änderung)",
+            "es": "Duración (minutos, 0: hasta el cambio)"
+          },
+          "required": false,
+          "default": 60,
+          "min": 0,
+          "max": 1440
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "protect",
+      "label": {
+        "en": "UniFi Protect",
+        "fr": "UniFi Protect",
+        "de": "UniFi Protect",
+        "es": "UniFi Protect"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Latest detections with their image, and the state of the cameras.",
+        "fr": "Dernières détections avec leur image, et état des caméras.",
+        "de": "Letzte Erkennungen mit ihrem Bild und der Zustand der Kameras.",
+        "es": "Últimas detecciones con su imagen y estado de las cámaras."
+      },
+      "icon": "video",
+      "settings": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Camera (empty: all)",
+            "fr": "Caméra (vide : toutes)",
+            "de": "Kamera (leer: alle)",
+            "es": "Cámara (vacío: todas)"
+          }
+        }
+      ]
     }
   ]
 }

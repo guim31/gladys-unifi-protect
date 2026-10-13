@@ -1,41 +1,66 @@
 // -----------------------------------------------------------------------------
-// Scene actions (SDK v0.14+, Gladys 5.1+).
+// Scene action handlers (manifest `scene_actions`, Gladys 5.1+).
 //
-// A scene action is an OPERATION a scene author places in a scene, with
-// parameters and a result: "identify this device", "take a snapshot", "clean
-// these rooms". Each one is declared in the manifest `scene_actions` field
-// (key, label, `fields` in the config_schema grammar, scalar `outputs`) and
-// handled here, keyed by that same `key`; index.js registers every entry with
-// `gladys.onSceneAction(key, ...)`.
-//
-// Scene TRIGGERS are the other direction ("this happened"): they are fired by
-// the device that observes the event, see src/devices/motionSensor.js.
-//
-// The rules that matter:
-//   - `fields` arrive RESOLVED: scene variables substituted, defaults applied,
-//     validated by the core; a `"source": "devices"` field is the chosen
-//     device external_id;
-//   - resolve an object of the declared `outputs` (scalars only), readable by
-//     the following actions of the scene, or `undefined` for none. Keys not
-//     declared in the manifest are dropped by the core;
-//   - throwing fails THIS action only: the scene logs it and continues. A
-//     scene action is never a condition: return an output and let the scene
-//     author gate on it;
-//   - never fire a scene event as a consequence of a received action: a scene
-//     bound to that event would loop through the integration.
+// Nothing risky, on purpose: the Integration API offers neither the recording
+// mode nor the notifications of a camera, and the integration does not arm,
+// disarm or silence anything. Two actions remain, both harmless and useful:
+//   - refresh_snapshot: a fresh image of a camera, sent to Gladys, so the
+//     next action ("send the camera image" in a message) sends what the
+//     camera sees now;
+//   - set_doorbell_message: the message of a doorbell screen ("Do not
+//     disturb" at night, "Leave the package at the door" when away), for a
+//     number of minutes or until changed, or cleared.
+// Gladys applies the field defaults to scene actions; a failure throws, the
+// scene logs it and carries on.
 // -----------------------------------------------------------------------------
 
-import { createLogger } from '@gladysassistant/integration-sdk';
-import { signalDevice } from './devices/index.js';
+import { ACTION_TEXT, pick } from './texts.js';
 
-const logger = createLogger({ name: 'scenes' });
+// `message` options of set_doorbell_message (permanent once published) →
+// the Protect message type (null clears the screen).
+export const DOORBELL_MESSAGES = Object.freeze({
+  do_not_disturb: 'DO_NOT_DISTURB',
+  leave_package: 'LEAVE_PACKAGE_AT_DOOR',
+  custom: 'CUSTOM_MESSAGE',
+  clear: null,
+});
+
+// The doorbell screen shows 30 characters (uiprotect DoorbellText).
+export const MAX_MESSAGE_LENGTH = 30;
+export const MAX_MESSAGE_MINUTES = 1440;
+export const DEFAULT_MESSAGE_MINUTES = 60;
+
+/** Minutes from a scene field: an integer from 0 (until changed) to a day. */
+export function parseMinutes(raw) {
+  const minutes = Math.round(Number(String(raw ?? '').replace(',', '.')));
+  if (!Number.isFinite(minutes)) {
+    return DEFAULT_MESSAGE_MINUTES;
+  }
+  return Math.min(MAX_MESSAGE_MINUTES, Math.max(0, minutes));
+}
 
 export const SCENE_ACTIONS = {
-  // The ack is awaited under the action's `timeout_seconds` (15 s in the
-  // manifest), counted from the moment the scene reaches the action.
-  async identify_device(gladys, { fields, config }) {
-    logger.info(`Scene action identify_device <- ${fields.device}`);
-    const signalled = await signalDevice(gladys, fields.device, config);
-    return { signalled };
+  async refresh_snapshot(hub, { fields = {} }) {
+    await hub.refreshSnapshot(fields.camera);
+  },
+
+  async set_doorbell_message(hub, { fields = {} }) {
+    const key = Object.hasOwn(DOORBELL_MESSAGES, fields.message)
+      ? fields.message
+      : 'do_not_disturb';
+    const type = DOORBELL_MESSAGES[key];
+    const message = { type };
+    if (type === 'CUSTOM_MESSAGE') {
+      const text = typeof fields.text === 'string' ? fields.text.trim() : '';
+      if (!text) {
+        throw new Error(pick(ACTION_TEXT.customText, hub.language));
+      }
+      message.text = text.slice(0, MAX_MESSAGE_LENGTH);
+    }
+    if (type !== null) {
+      const minutes = parseMinutes(fields.duration);
+      message.resetAt = minutes > 0 ? hub.now() + minutes * 60_000 : null;
+    }
+    await hub.setDoorbellMessage(fields.doorbell, message);
   },
 };

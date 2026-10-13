@@ -1,0 +1,14 @@
+[
+  {
+    "type": "update",
+    "item": {
+      "id": "67a0000000000000000000e3",
+      "modelKey": "event",
+      "type": "smartDetectZone",
+      "start": 1735690000000,
+      "end": 1735690006000,
+      "device": "66f1a2b3c4d5e6f708090a01",
+      "smartDetectTypes": ["package"]
+    }
+  }
+]

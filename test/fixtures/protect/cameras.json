@@ -1,0 +1,165 @@
+[
+  {
+    "id": "66f1a2b3c4d5e6f708090a01",
+    "modelKey": "camera",
+    "state": "CONNECTED",
+    "name": "Porte d'entrée",
+    "mac": "F4E2C6000001",
+    "isMicEnabled": true,
+    "osdSettings": {
+      "isNameEnabled": true,
+      "isDateEnabled": true,
+      "isLogoEnabled": false,
+      "isDebugEnabled": false,
+      "overlayLocation": "topLeft"
+    },
+    "ledSettings": {
+      "isEnabled": true,
+      "welcomeLed": null,
+      "floodLed": null
+    },
+    "lcdMessage": {},
+    "micVolume": 100,
+    "activePatrolSlot": null,
+    "videoMode": "default",
+    "hdrType": "auto",
+    "featureFlags": {
+      "supportFullHdSnapshot": true,
+      "hasHdr": true,
+      "hasMic": true,
+      "hasLedStatus": true,
+      "hasSpeaker": false,
+      "videoModes": ["default"],
+      "smartDetectTypes": ["person", "vehicle", "package"],
+      "smartDetectAudioTypes": ["alrmSmoke"]
+    },
+    "smartDetectSettings": {
+      "objectTypes": ["person", "vehicle", "package"],
+      "audioTypes": []
+    },
+    "hasPackageCamera": true,
+    "type": "UVC G4 Doorbell Pro"
+  },
+  {
+    "id": "66f1a2b3c4d5e6f708090a02",
+    "modelKey": "camera",
+    "state": "CONNECTED",
+    "name": "Allée",
+    "mac": "F4E2C6000002",
+    "isMicEnabled": true,
+    "osdSettings": {
+      "isNameEnabled": true,
+      "isDateEnabled": true,
+      "isLogoEnabled": false,
+      "isDebugEnabled": false,
+      "overlayLocation": "topLeft"
+    },
+    "ledSettings": {
+      "isEnabled": true,
+      "welcomeLed": null,
+      "floodLed": null
+    },
+    "lcdMessage": {},
+    "micVolume": 100,
+    "activePatrolSlot": null,
+    "videoMode": "default",
+    "hdrType": "auto",
+    "featureFlags": {
+      "supportFullHdSnapshot": true,
+      "hasHdr": true,
+      "hasMic": true,
+      "hasLedStatus": true,
+      "hasSpeaker": false,
+      "videoModes": ["default"],
+      "smartDetectTypes": ["person", "vehicle", "animal", "licensePlate"],
+      "smartDetectAudioTypes": ["alrmSmoke"]
+    },
+    "smartDetectSettings": {
+      "objectTypes": ["person", "vehicle", "animal", "licensePlate"],
+      "audioTypes": []
+    },
+    "hasPackageCamera": false,
+    "type": "UVC G5 Bullet"
+  },
+  {
+    "id": "66f1a2b3c4d5e6f708090a03",
+    "modelKey": "camera",
+    "state": "DISCONNECTED",
+    "name": "Garage",
+    "mac": "F4E2C6000003",
+    "isMicEnabled": true,
+    "osdSettings": {
+      "isNameEnabled": true,
+      "isDateEnabled": true,
+      "isLogoEnabled": false,
+      "isDebugEnabled": false,
+      "overlayLocation": "topLeft"
+    },
+    "ledSettings": {
+      "isEnabled": true,
+      "welcomeLed": null,
+      "floodLed": null
+    },
+    "lcdMessage": {},
+    "micVolume": 100,
+    "activePatrolSlot": null,
+    "videoMode": "default",
+    "hdrType": "auto",
+    "featureFlags": {
+      "supportFullHdSnapshot": true,
+      "hasHdr": true,
+      "hasMic": true,
+      "hasLedStatus": true,
+      "hasSpeaker": false,
+      "videoModes": ["default"],
+      "smartDetectTypes": [],
+      "smartDetectAudioTypes": ["alrmSmoke"]
+    },
+    "smartDetectSettings": {
+      "objectTypes": [],
+      "audioTypes": []
+    },
+    "hasPackageCamera": false,
+    "type": "UVC G4 Instant"
+  },
+  {
+    "id": "66f1a2b3c4d5e6f708090a04",
+    "modelKey": "camera",
+    "state": "CONNECTED",
+    "name": null,
+    "mac": "F4E2C6000004",
+    "isMicEnabled": true,
+    "osdSettings": {
+      "isNameEnabled": true,
+      "isDateEnabled": true,
+      "isLogoEnabled": false,
+      "isDebugEnabled": false,
+      "overlayLocation": "topLeft"
+    },
+    "ledSettings": {
+      "isEnabled": true,
+      "welcomeLed": null,
+      "floodLed": null
+    },
+    "lcdMessage": {},
+    "micVolume": 100,
+    "activePatrolSlot": null,
+    "videoMode": "default",
+    "hdrType": "auto",
+    "featureFlags": {
+      "supportFullHdSnapshot": true,
+      "hasHdr": true,
+      "hasMic": true,
+      "hasLedStatus": true,
+      "hasSpeaker": false,
+      "videoModes": ["default"],
+      "smartDetectTypes": ["person"],
+      "smartDetectAudioTypes": ["alrmSmoke"]
+    },
+    "smartDetectSettings": {
+      "objectTypes": ["person"],
+      "audioTypes": []
+    },
+    "hasPackageCamera": false
+  }
+]

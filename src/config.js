@@ -1,45 +1,83 @@
 // -----------------------------------------------------------------------------
-// Integration configuration.
+// Integration configuration: defaults (they mirror the `default` values of the
+// manifest `config_schema`, see test/manifest.test.js) and normalization, so
+// the rest of the code never deals with strings, blanks or `undefined`.
 //
-// The configuration is filled in by the user in Gladys, from the `config_schema`
-// declared in `gladys-assistant-integration.json`. The SDK fetches it for you
-// (`gladys.getConfig()`) and notifies you of every change through
-// `gladys.onConfigUpdated()`.
-//
-// This module only provides defaults and normalizes the received object, so the
-// rest of the code never has to deal with `undefined`.
+// One UniFi Protect console per installation: its address, an API key of the
+// official Integration API, and an explicit choice about its certificate.
 // -----------------------------------------------------------------------------
 
-// Defaults: they MUST stay consistent with the `default` values declared in the
-// `config_schema` of the manifest.
+export const LANGUAGES = ['en', 'fr', 'de', 'es'];
+
+// How often a fresh image of every camera is sent to Gladys, in minutes
+// (`0`: only on a detection, a ring, a scene action or the live view).
+export const SNAPSHOT_INTERVALS = ['0', '1', '5', '15', '60'];
+
 export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  // Seconds between two reads of the polled sensors. Gladys polls at most once
-  // a minute: slower intervals are applied by skipping polls (see
-  // createPoller in src/devices/index.js).
-  poll_frequency: 300,
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
+  host: '',
+  api_key: '',
+  allow_self_signed: false,
+  snapshot_interval: '5',
+  language: 'fr',
 };
 
 /**
- * Merge the user config with the defaults.
- * @param {Record<string, unknown>} raw config returned by the SDK
+ * Parse the address typed by the user into the console origin: a bare host or
+ * IP (`192.0.2.1`, `unvr.local:8443`), or the URL copied from the browser
+ * (`https://192.0.2.1/protect/dashboard`). The Integration API is served over
+ * HTTPS only, so a bare host means HTTPS and any other scheme is refused.
+ * @param {unknown} raw
+ * @returns {string|null} `https://host[:port]`, null when unusable
+ */
+export function parseHost(raw) {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const text = raw.trim();
+  if (!text) {
+    return null;
+  }
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`;
+  let url;
+  try {
+    url = new URL(withScheme);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || !url.hostname) {
+    return null;
+  }
+  // Credentials in the address would end up in the logs.
+  if (url.username || url.password) {
+    return null;
+  }
+  return url.origin;
+}
+
+/** Host part shown to the user (no scheme). */
+export const hostOf = (origin) => origin.replace(/^https:\/\//, '');
+
+/**
+ * @param {Record<string, unknown>} raw the configuration returned by the SDK
  */
 export function normalizeConfig(raw = {}) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const text = (key) => (typeof source[key] === 'string' ? source[key].trim() : '');
+  const typedHost = text('host');
+  const host = parseHost(typedHost);
+  const interval = String(source.snapshot_interval ?? DEFAULT_CONFIG.snapshot_interval);
+  const language = text('language');
   return {
-    ...DEFAULT_CONFIG,
-    ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
+    host,
+    // An address was typed but cannot be used: said in the connection status.
+    hostInvalid: typedHost !== '' && host === null,
+    apiKey: text('api_key'),
+    // A boolean field may arrive as a string from older form engines.
+    allowSelfSigned: source.allow_self_signed === true || source.allow_self_signed === 'true',
+    snapshotIntervalMs:
+      (SNAPSHOT_INTERVALS.includes(interval)
+        ? Number(interval)
+        : Number(DEFAULT_CONFIG.snapshot_interval)) * 60_000,
+    language: LANGUAGES.includes(language) ? language : DEFAULT_CONFIG.language,
   };
 }

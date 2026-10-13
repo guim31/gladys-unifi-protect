@@ -1,0 +1,26 @@
+[
+  {
+    "id": "66f1a2b3c4d5e6f708090b01",
+    "modelKey": "light",
+    "state": "CONNECTED",
+    "name": "Projecteur jardin",
+    "type": "UP FloodLight",
+    "mac": "F4E2C6000011",
+    "lightModeSettings": {
+      "mode": "motion",
+      "enableAt": "dark"
+    },
+    "lightDeviceSettings": {
+      "isIndicatorEnabled": true,
+      "pirDuration": 15000,
+      "pirSensitivity": 80,
+      "ledLevel": 3
+    },
+    "isDark": true,
+    "isLightOn": false,
+    "isLightForceEnabled": false,
+    "lastMotion": null,
+    "isPirMotionDetected": false,
+    "camera": "66f1a2b3c4d5e6f708090a02"
+  }
+]
