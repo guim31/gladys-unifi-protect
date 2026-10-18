@@ -201,6 +201,57 @@
           "label": { "en": "Español", "fr": "Español", "de": "Español", "es": "Español" }
         }
       ]
+    },
+    {
+      "key": "night",
+      "type": "section",
+      "label": {
+        "en": "Night detection (optional)",
+        "fr": "Détection de nuit (facultatif)",
+        "de": "Nachterkennung (optional)",
+        "es": "Detección de noche (opcional)"
+      },
+      "description": {
+        "en": "The API key does not tell whether a camera sees the night. With a local account of the console (no 2FA, read only is enough), each camera gets a \"Dark\" feature. Uses an undocumented API: a Protect update may break it.",
+        "fr": "La clé d'API ne dit pas si une caméra voit la nuit. Avec un compte local de la console (sans double authentification, lecture seule suffit), chaque caméra reçoit une fonctionnalité « Nuit ». API non documentée : une mise à jour de Protect peut la casser.",
+        "de": "Der API-Schlüssel verrät nicht, ob eine Kamera Nacht sieht. Mit einem lokalen Konto der Konsole (ohne 2FA, Nur-Lesen genügt) erhält jede Kamera die Funktion „Dunkel“. Nicht dokumentierte API: Ein Protect-Update kann sie brechen.",
+        "es": "La clave de API no indica si una cámara ve la noche. Con una cuenta local de la consola (sin doble autenticación, solo lectura basta), cada cámara recibe la función «Oscuridad». API no documentada: una actualización de Protect puede romperla."
+      }
+    },
+    {
+      "key": "username",
+      "type": "string",
+      "label": {
+        "en": "Local account username",
+        "fr": "Identifiant du compte local",
+        "de": "Benutzername des lokalen Kontos",
+        "es": "Usuario de la cuenta local"
+      },
+      "description": {
+        "en": "Leave empty to use the API key only.",
+        "fr": "Laissez vide pour n'utiliser que la clé d'API.",
+        "de": "Leer lassen, um nur den API-Schlüssel zu nutzen.",
+        "es": "Déjelo vacío para usar solo la clave de API."
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Local account password",
+        "fr": "Mot de passe du compte local",
+        "de": "Passwort des lokalen Kontos",
+        "es": "Contraseña de la cuenta local"
+      },
+      "description": {
+        "en": "Sent to the console only, never to a cloud.",
+        "fr": "Envoyé à la console seulement, jamais à un cloud.",
+        "de": "Geht nur an die Konsole, nie an eine Cloud.",
+        "es": "Solo se envía a la consola, nunca a una nube."
+      },
+      "required": false
     }
   ],
   "actions": [

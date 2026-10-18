@@ -37,6 +37,7 @@ import {
 } from './devices.js';
 import { toCameraImage } from './image.js';
 import { ERROR_KINDS, ProtectClient } from './protect/client.js';
+import { LegacyReader } from './protect/legacy.js';
 import { DeviceStore, EVENT_TYPES, EventTracker, KINDS, OBJECTS } from './protect/model.js';
 import { ProtectSocket } from './protect/socket.js';
 import {
@@ -64,6 +65,8 @@ export const HUB_TIMINGS = {
   // While the devices socket is down, the REST reads carry the states.
   fallbackRefreshMs: 60_000,
   heartbeatMs: 6 * 60 * 60_000,
+  // Night detection over the internal API (optional local account).
+  darkMs: 60_000,
   // A ring, a package, a floodlight detection: 1, then 0 after this.
   pulseMs: 10_000,
   // The core takes 12 images a minute per camera at most.
@@ -77,7 +80,14 @@ export const MAX_DETECTIONS = 8;
 const DAY_MS = 24 * 60 * 60_000;
 const MAX_COUNTED = 5000;
 
-const signature = (config) => JSON.stringify([config.host, config.apiKey, config.allowSelfSigned]);
+const signature = (config) =>
+  JSON.stringify([
+    config.host,
+    config.apiKey,
+    config.allowSelfSigned,
+    config.username,
+    config.password,
+  ]);
 
 const delay = (ms) =>
   new Promise((resolve) => {
@@ -120,6 +130,11 @@ export class ProtectHub {
     this.config = null;
     this.signature = null;
     this.client = null;
+    /** Reader of the internal API, only with a local account (t/11350). */
+    this.legacy = null;
+    /** Whether each camera sees the night, by MAC; `error` of the last read. */
+    this.dark = new Map();
+    this.darkError = null;
     this.devices = new DeviceStore();
     this.tracker = new EventTracker({ now: this.now });
     this.sockets = {};
@@ -142,6 +157,7 @@ export class ProtectHub {
     this.connection = null;
     this.refreshTimer = null;
     this.snapshotTimer = null;
+    this.darkTimer = null;
     this.stopped = false;
     /** Problems already logged, by key: their repeats go to debug. */
     this.warned = new Set();
@@ -207,10 +223,23 @@ export class ProtectHub {
               request: this.request,
             })
           : null;
+      this.legacy =
+        this.client && config.username && config.password
+          ? new LegacyReader({
+              origin: config.host,
+              username: config.username,
+              password: config.password,
+              insecure: config.allowSelfSigned,
+              request: this.request,
+            })
+          : null;
+      this.dark = new Map();
+      this.darkError = null;
     }
     if (!this.client) {
       clearTimeout(this.refreshTimer);
       clearTimeout(this.snapshotTimer);
+      clearTimeout(this.darkTimer);
       await this.publishDevices();
       await this.publishConnectionStatus();
       return;
@@ -222,14 +251,17 @@ export class ProtectHub {
     if (changed) {
       this.openSockets();
     }
+    await this.readDarkness();
     this.scheduleRefresh();
     this.scheduleSnapshots();
+    this.scheduleDarkness();
   }
 
   async stop() {
     this.stopped = true;
     clearTimeout(this.refreshTimer);
     clearTimeout(this.snapshotTimer);
+    clearTimeout(this.darkTimer);
     this.closeSockets();
     for (const timers of this.pulses.values()) {
       for (const timer of timers.values()) {
@@ -262,6 +294,17 @@ export class ProtectHub {
       await this.snapshotAll();
       this.scheduleSnapshots();
     }, interval);
+  }
+
+  scheduleDarkness() {
+    clearTimeout(this.darkTimer);
+    if (!this.timersEnabled || this.stopped || !this.legacy) {
+      return;
+    }
+    this.darkTimer = setTimeout(async () => {
+      await this.readDarkness();
+      this.scheduleDarkness();
+    }, this.timings.darkMs);
   }
 
   // --- Reading the console ---------------------------------------------------
@@ -310,6 +353,41 @@ export class ProtectHub {
     await this.publishDevices();
     await this.publishAllStates();
     await this.afterChanges();
+    return true;
+  }
+
+  /**
+   * Read `isDark` over the internal API and publish what changed. A failure
+   * keeps the last values: the rest of the integration does not depend on it.
+   * @returns {Promise<boolean>}
+   */
+  async readDarkness() {
+    const legacy = this.legacy;
+    if (!legacy) {
+      return false;
+    }
+    let dark;
+    try {
+      dark = await legacy.darkness();
+    } catch (err) {
+      if (legacy === this.legacy) {
+        this.darkError = err;
+        this.problem('dark', `Night detection unavailable (internal API): ${err.message}`);
+      }
+      return false;
+    }
+    if (legacy !== this.legacy) {
+      return false; // reconfigured while reading
+    }
+    this.darkError = null;
+    this.resolved('dark', 'Night detection read again');
+    const changed = [...dark].filter(([mac, value]) => this.dark.get(mac) !== value);
+    this.dark = dark;
+    for (const device of this.devices.devices()) {
+      if (device.kind === KINDS.CAMERA && changed.some(([mac]) => mac === device.mac)) {
+        await this.publishStates(device);
+      }
+    }
     return true;
   }
 
@@ -609,6 +687,7 @@ export class ProtectHub {
       buildDevice(this.gladys, device, {
         language: this.language,
         doorbell: this.doorbells.has(device.mac),
+        dark: Boolean(this.legacy),
       }),
     );
     const key = JSON.stringify(devices);
@@ -666,8 +745,12 @@ export class ProtectHub {
     const values = featureValues(device, {
       ...activity,
       pulses: new Set(this.pulses.get(device.id)?.keys() ?? []),
+      dark: this.dark.get(device.mac),
     });
-    const states = featureKeys(device, { doorbell: this.doorbells.has(device.mac) })
+    const states = featureKeys(device, {
+      doorbell: this.doorbells.has(device.mac),
+      dark: Boolean(this.legacy),
+    })
       .filter((key) => values[key] !== undefined && values[key] !== null)
       .map((key) => ({ device_feature_external_id: ids.feature(key), state: values[key] }));
     if (states.length === 0) {
@@ -964,6 +1047,7 @@ export class ProtectHub {
     }
     this.read.version = null; // asks the version again
     const ok = await this.refresh();
+    await this.readDarkness();
     if (!ok) {
       const err = this.read.error;
       logger.info(`Connection test: failed (${err?.message ?? 'no answer'})`);
@@ -979,6 +1063,11 @@ export class ProtectHub {
       ];
       if (this.client.insecure && fingerprint) {
         parts.push(text.certificate(fingerprint));
+      }
+      if (this.legacy) {
+        parts.push(
+          this.darkError ? text.darkFailed(this.darkError.message) : text.dark(this.dark.size),
+        );
       }
       return parts.join(' ');
     });

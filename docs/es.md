@@ -57,6 +57,14 @@ En Gladys, abra la integración y luego su pestaña **Configuración**:
 - **Idioma de los nombres**: el idioma de los nombres de funciones y de los
   textos enviados a las escenas (francés por defecto). Los nombres se fijan
   al añadir un dispositivo a Gladys.
+- **Usuario de la cuenta local** y **Contraseña de la cuenta local**
+  (opcionales): la clave de API no indica si una cámara ve la noche. Con una
+  cuenta local de la consola (no una cuenta Ubiquiti con doble
+  autenticación; basta un rol de solo lectura), cada cámara recibe la función
+  **Oscuridad**, leída cada minuto. Usa la API interna de Protect, no
+  documentada: una actualización de Protect puede romperla, el resto sigue
+  funcionando. Tras un inicio de sesión rechazado, no se vuelve a intentar
+  hasta que guarde nuevos ajustes.
 
 Guarde: el estado bajo el nombre de la integración pasa a conectado, y los
 dispositivos aparecen en la pestaña **Descubrir**. Añada los que quiera.
@@ -86,6 +94,9 @@ Un dispositivo por cámara, con el nombre que tiene en Protect:
   detección inteligente de ese tipo — solo los tipos que su cámara sabe
   detectar. Protect avisa de un paquete una sola vez: la función se activa
   10 segundos.
+- **Oscuridad**: activada mientras la cámara ve la noche (solo con la
+  cuenta local opcional, vea los ajustes). Útil para la iluminación
+  exterior.
 
 ### Timbres
 

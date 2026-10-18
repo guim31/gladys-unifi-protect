@@ -11,7 +11,9 @@
 //   camera     image (camera/image), online (input/binary), motion and one
 //              smart detection per type the camera can see — person, vehicle,
 //              animal, package — (motion-sensor/binary), ring for a doorbell
-//              (doorbell/ring, a 1 → 0 pulse, as the core expects);
+//              (doorbell/ring, a 1 → 0 pulse, as the core expects), dark
+//              (input/binary, 1 at night) only with a local account
+//              configured (src/protect/legacy.js);
 //   floodlight light (light/binary, writable), motion, online;
 //   sensor     opening (opening-sensor/binary: 0 open, 1 closed, the core
 //              convention), temperature, humidity, brightness, motion, water
@@ -49,6 +51,7 @@ export const FEATURE_KEYS = Object.freeze({
   BRIGHTNESS: 'brightness',
   LEAK: 'leak',
   BATTERY: 'battery',
+  DARK: 'dark',
 });
 
 // Feature names, in the language chosen in the configuration (Gladys does not
@@ -70,6 +73,7 @@ export const NAMES = {
     brightness: 'Brightness',
     leak: 'Water leak',
     battery: 'Battery',
+    dark: 'Dark',
   },
   fr: {
     image: 'Image',
@@ -87,6 +91,7 @@ export const NAMES = {
     brightness: 'Luminosité',
     leak: "Fuite d'eau",
     battery: 'Batterie',
+    dark: 'Nuit',
   },
   de: {
     image: 'Bild',
@@ -104,6 +109,7 @@ export const NAMES = {
     brightness: 'Helligkeit',
     leak: 'Wasserleck',
     battery: 'Batterie',
+    dark: 'Dunkel',
   },
   es: {
     image: 'Imagen',
@@ -121,6 +127,7 @@ export const NAMES = {
     brightness: 'Luminosidad',
     leak: 'Fuga de agua',
     battery: 'Batería',
+    dark: 'Oscuridad',
   },
 };
 
@@ -155,6 +162,7 @@ const DEFINITIONS = {
     max: 0,
   },
   [FEATURE_KEYS.ONLINE]: binary(DEVICE_FEATURE_CATEGORIES.INPUT),
+  [FEATURE_KEYS.DARK]: binary(DEVICE_FEATURE_CATEGORIES.INPUT),
   [FEATURE_KEYS.MOTION]: binary(DEVICE_FEATURE_CATEGORIES.MOTION_SENSOR),
   [FEATURE_KEYS.PERSON]: binary(DEVICE_FEATURE_CATEGORIES.MOTION_SENSOR),
   [FEATURE_KEYS.VEHICLE]: binary(DEVICE_FEATURE_CATEGORIES.MOTION_SENSOR),
@@ -221,12 +229,15 @@ const DEFINITIONS = {
 export const deviceIds = (gladys, kind, mac) => gladys.externalIds(kind, mac);
 
 /** The feature keys a device has, in display order. */
-export function featureKeys(device, { doorbell = false } = {}) {
+export function featureKeys(device, { doorbell = false, dark = false } = {}) {
   if (device.kind === KINDS.CAMERA) {
     const keys = [FEATURE_KEYS.IMAGE, FEATURE_KEYS.ONLINE, FEATURE_KEYS.MOTION];
     keys.push(...device.smartTypes.map((type) => SMART_FEATURES[type]));
     if (device.doorbell || doorbell) {
       keys.push(FEATURE_KEYS.RING);
+    }
+    if (dark) {
+      keys.push(FEATURE_KEYS.DARK);
     }
     return keys;
   }
@@ -262,15 +273,20 @@ export function deviceName(device, language = 'en') {
  * @param {object} [options]
  * @param {string} [options.language] feature names language
  * @param {boolean} [options.doorbell] the camera was seen ringing
+ * @param {boolean} [options.dark] a local account is configured: "Dark" feature
  */
-export function buildDevice(gladys, device, { language = 'en', doorbell = false } = {}) {
+export function buildDevice(
+  gladys,
+  device,
+  { language = 'en', doorbell = false, dark = false } = {},
+) {
   const ids = deviceIds(gladys, device.kind, device.mac);
   const names = NAMES[language] ?? NAMES.en;
   return {
     name: deviceName(device, language),
     external_id: ids.device,
     should_poll: false,
-    features: featureKeys(device, { doorbell }).map((key) => ({
+    features: featureKeys(device, { doorbell, dark }).map((key) => ({
       ...DEFINITIONS[key],
       name: names[key],
       external_id: ids.feature(key),
@@ -284,7 +300,8 @@ const round1 = (value) => (value === null ? null : Math.round(value * 10) / 10);
 /**
  * The value of every feature of a device (null: nothing to publish).
  * @param {object} device a parsed device
- * @param {object} live what the events say now: `{ motion, objects: Set, pulses: Set }`
+ * @param {object} live what the events say now: `{ motion, objects: Set, pulses: Set }`,
+ *   and `dark` (boolean, undefined when unknown)
  */
 export function featureValues(device, live = {}) {
   const objects = live.objects ?? new Set();
@@ -296,6 +313,7 @@ export function featureValues(device, live = {}) {
       values[SMART_FEATURES[type]] = flag(objects.has(type) || pulses.has(type));
     }
     values[FEATURE_KEYS.RING] = flag(pulses.has(FEATURE_KEYS.RING));
+    values[FEATURE_KEYS.DARK] = typeof live.dark === 'boolean' ? flag(live.dark) : null;
   } else if (device.kind === KINDS.LIGHT) {
     values[FEATURE_KEYS.LIGHT] = flag(device.lightOn);
     values[FEATURE_KEYS.MOTION] = flag(device.motion || pulses.has(FEATURE_KEYS.MOTION));
