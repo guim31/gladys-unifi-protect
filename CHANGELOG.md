@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-18
+
 ### Added
 
 - Night detection (optional): with a local account of the console, every
@@ -46,5 +48,6 @@ the notes of the version's GitHub Release.
 - Feature names, messages and documentation in English, French, German and
   Spanish.
 
-[Unreleased]: https://github.com/guim31/gladys-unifi-protect/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/guim31/gladys-unifi-protect/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/guim31/gladys-unifi-protect/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/guim31/gladys-unifi-protect/releases/tag/v1.0.1
