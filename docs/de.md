@@ -58,6 +58,14 @@ Ubiquiti-Cloud-Konto, nichts verlässt dein Netzwerk.
 - **Sprache der Namen**: die Sprache der Funktionsnamen und der Texte für die
   Szenen (standardmäßig Französisch). Die Namen werden beim Hinzufügen eines
   Geräts zu Gladys festgelegt.
+- **Benutzername des lokalen Kontos** und **Passwort des lokalen Kontos**
+  (optional): Der API-Schlüssel verrät nicht, ob eine Kamera Nacht sieht. Mit
+  einem lokalen Konto der Konsole (kein Ubiquiti-Konto mit
+  Zwei-Faktor-Authentifizierung; eine Nur-Lesen-Rolle genügt) erhält jede
+  Kamera die Funktion **Dunkel**, jede Minute gelesen. Dafür wird die interne
+  Protect-API genutzt, die nicht dokumentiert ist: Ein Protect-Update kann sie
+  brechen, der Rest läuft weiter. Nach einer abgelehnten Anmeldung gibt es
+  keinen neuen Versuch, bis du neue Einstellungen speicherst.
 
 Speichere: Der Status unter dem Namen der Integration wechselt auf verbunden,
 und die Geräte erscheinen im Tab **Entdecken**. Füge die gewünschten hinzu.
@@ -87,6 +95,8 @@ Ein Gerät pro Kamera, benannt wie in Protect:
   intelligenten Erkennung dieser Art — nur die Arten, die deine Kamera
   erkennen kann. Ein Paket meldet Protect nur einmal: Die Funktion ist dann
   10 Sekunden an.
+- **Dunkel**: an, solange die Kamera Nacht sieht (nur mit dem optionalen
+  lokalen Konto, siehe Einstellungen). Praktisch für die Außenbeleuchtung.
 
 ### Türklingeln
 

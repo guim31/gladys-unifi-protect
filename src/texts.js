@@ -95,21 +95,29 @@ export const REPORT_TEXT = {
     ok: (version, cameras, lights, sensors) =>
       `UniFi Protect ${version}: ${cameras} camera(s), ${lights} floodlight(s), ${sensors} sensor(s).`,
     certificate: (fingerprint) => `Self-signed certificate accepted, SHA-256 ${fingerprint}.`,
+    dark: (count) => `Night detection: read on ${count} camera(s).`,
+    darkFailed: (message) => `Night detection unavailable: ${message}.`,
   },
   fr: {
     ok: (version, cameras, lights, sensors) =>
       `UniFi Protect ${version} : ${cameras} caméra(s), ${lights} projecteur(s), ${sensors} capteur(s).`,
     certificate: (fingerprint) => `Certificat auto-signé accepté, SHA-256 ${fingerprint}.`,
+    dark: (count) => `Détection de nuit : lue sur ${count} caméra(s).`,
+    darkFailed: (message) => `Détection de nuit indisponible : ${message}.`,
   },
   de: {
     ok: (version, cameras, lights, sensors) =>
       `UniFi Protect ${version}: ${cameras} Kamera(s), ${lights} Flutlicht(er), ${sensors} Sensor(en).`,
     certificate: (fingerprint) => `Selbstsigniertes Zertifikat akzeptiert, SHA-256 ${fingerprint}.`,
+    dark: (count) => `Nachterkennung: auf ${count} Kamera(s) gelesen.`,
+    darkFailed: (message) => `Nachterkennung nicht verfügbar: ${message}.`,
   },
   es: {
     ok: (version, cameras, lights, sensors) =>
       `UniFi Protect ${version}: ${cameras} cámara(s), ${lights} foco(s), ${sensors} sensor(es).`,
     certificate: (fingerprint) => `Certificado autofirmado aceptado, SHA-256 ${fingerprint}.`,
+    dark: (count) => `Detección de noche: leída en ${count} cámara(s).`,
+    darkFailed: (message) => `Detección de noche no disponible: ${message}.`,
   },
 };
 

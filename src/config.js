@@ -16,6 +16,8 @@ export const SNAPSHOT_INTERVALS = ['0', '1', '5', '15', '60'];
 export const DEFAULT_CONFIG = {
   host: '',
   api_key: '',
+  username: '',
+  password: '',
   allow_self_signed: false,
   snapshot_interval: '5',
   language: 'fr',
@@ -72,6 +74,10 @@ export function normalizeConfig(raw = {}) {
     // An address was typed but cannot be used: said in the connection status.
     hostInvalid: typedHost !== '' && host === null,
     apiKey: text('api_key'),
+    // Optional local account, for the internal API (src/protect/legacy.js).
+    username: text('username'),
+    // A password is taken as typed: spaces may be part of it.
+    password: typeof source.password === 'string' ? source.password : '',
     // A boolean field may arrive as a string from older form engines.
     allowSelfSigned: source.allow_self_signed === true || source.allow_self_signed === 'true',
     snapshotIntervalMs:

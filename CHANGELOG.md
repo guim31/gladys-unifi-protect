@@ -10,6 +10,14 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Night detection (optional): with a local account of the console, every
+  camera gets a "Dark" feature that follows `isDark` of the internal Protect
+  API, read every minute — for example to switch outdoor lights (forum
+  t/11350). Without the account nothing changes; the internal API is not
+  documented and may break with a Protect update.
+
 ## [1.0.1] - 2026-10-13
 
 ### Added

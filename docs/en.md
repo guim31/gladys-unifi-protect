@@ -55,6 +55,13 @@ In Gladys, open the integration, then its **Configuration** tab:
 - **Language of the names**: the language of the feature names and of the
   texts sent to the scenes (French by default). Names are set when a device
   is added to Gladys.
+- **Local account username** and **Local account password** (optional):
+  the API key does not tell whether a camera sees the night. With a local
+  account of the console (not a Ubiquiti account with two-factor
+  authentication; a read-only role is enough), every camera gets a **Dark**
+  feature, read every minute. This uses the internal Protect API, which is
+  not documented: a Protect update may break it, the rest keeps working.
+  After a refused login, it is not tried again until you save new settings.
 
 Save: the status under the integration name turns to connected, and the
 devices appear in the **Discover** tab. Add the ones you want.
@@ -83,6 +90,8 @@ One device per camera, named as in Protect:
   detection of that kind is in progress — only the kinds your camera can
   detect. A package is reported once by Protect: the feature turns on for
   10 seconds.
+- **Dark**: on while the camera sees the night (only with the optional
+  local account, see the settings). Handy to switch outdoor lights.
 
 ### Doorbells
 

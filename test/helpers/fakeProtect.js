@@ -89,6 +89,13 @@ export class FakeProtect {
     this.snapshot = smallJpeg();
     this.snapshotStatus = 200;
     this.requests = [];
+    // Internal API (src/protect/legacy.js): a local account, a session, isDark by MAC.
+    this.account = { username: 'gladys', password: 'secret pass' };
+    this.session = 0;
+    this.dark = new Map();
+    this.cookieName = 'TOKEN';
+    this.loginStatus = null; // forces an answer of the login (a restarting console)
+    this.protectAccess = true;
     this.sockets = new Set();
     this.socketAttempts = [];
     this.request = this.request.bind(this);
@@ -115,6 +122,40 @@ export class FakeProtect {
       body: Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body ?? {})),
       fingerprint: this.selfSigned ? 'AA:BB:CC:DD' : null,
     });
+    if (target.pathname === '/api/auth/login') {
+      if (this.loginStatus) {
+        return answer(this.loginStatus, {});
+      }
+      const { username, password } = json ?? {};
+      if (username !== this.account.username || password !== this.account.password) {
+        return answer(401, { error: 'Invalid credentials' });
+      }
+      this.session += 1;
+      return {
+        ...answer(200, { username }),
+        headers: {
+          'set-cookie': [`${this.cookieName}=session-${this.session}; path=/; HttpOnly`],
+          'x-csrf-token': `csrf-${this.session}`,
+        },
+      };
+    }
+    if (target.pathname === '/proxy/protect/api/cameras') {
+      const valid =
+        this.protectAccess &&
+        headers.cookie === `${this.cookieName}=session-${this.session}` &&
+        headers['x-csrf-token'] === `csrf-${this.session}`;
+      if (!this.session || !valid) {
+        return answer(401, { error: 'Unauthorized' });
+      }
+      return answer(
+        200,
+        this.cameras.map((camera) => ({
+          id: camera.id,
+          mac: camera.mac,
+          ...(this.dark.has(camera.mac) ? { isDark: this.dark.get(camera.mac) } : {}),
+        })),
+      );
+    }
     if (headers['X-API-KEY'] !== this.apiKey) {
       return answer(401, { error: 'Unauthorized' });
     }

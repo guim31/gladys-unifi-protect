@@ -276,6 +276,14 @@ le portail `developer.ui.com` et `fw-update.ubnt.com` sont refusés par le proxy
   température, humidité, lumière et mouvement. `isOpened` → `opening-sensor` **inversé** (0 = ouvert).
 - Projecteur : on ne commande que `isLightForceEnabled` ; l'état réel est `isLightOn`.
 
+**Détection de nuit (18/10/2026, stefanbauer, t/11350)** : l'API Integration ne donne pas `isDark`.
+Champs facultatifs `username` / `password` (compte local, sans 2FA) → `src/protect/legacy.js` lit l'API
+**interne** : `POST /api/auth/login` (cookie `TOKEN` ou `UOS_TOKEN`, en-tête `x-csrf-token`), puis `GET
+/proxy/protect/api/cameras` (`isDark` par MAC), toutes les 60 s (`darkMs`), lecture seule. Fonctionnalité
+`dark` (`input/binary`) publiée **seulement** quand le compte est configuré. Un refus de connexion n'est pas
+retenté avant une nouvelle config (verrouillage de compte). Champs relevés dans uiprotect, **pas sur une
+vraie console** : à vérifier au premier retour.
+
 **Images** : Gladys plafonne une image de caméra à **150 Ko mesurés sur toute la chaîne
 `image/jpg;base64,…`** (constante `MAX_CAMERA_IMAGE_SIZE` du SDK), soit ~112 Ko de JPEG. jpeg-js
 décode en gardant chaque bloc 8×8 dans son propre `Int32Array` : **~50 octets par pixel** (+110 Mo
