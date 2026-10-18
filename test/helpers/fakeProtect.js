@@ -93,6 +93,9 @@ export class FakeProtect {
     this.account = { username: 'gladys', password: 'secret pass' };
     this.session = 0;
     this.dark = new Map();
+    this.cookieName = 'TOKEN';
+    this.loginStatus = null; // forces an answer of the login (a restarting console)
+    this.protectAccess = true;
     this.sockets = new Set();
     this.socketAttempts = [];
     this.request = this.request.bind(this);
@@ -120,6 +123,9 @@ export class FakeProtect {
       fingerprint: this.selfSigned ? 'AA:BB:CC:DD' : null,
     });
     if (target.pathname === '/api/auth/login') {
+      if (this.loginStatus) {
+        return answer(this.loginStatus, {});
+      }
       const { username, password } = json ?? {};
       if (username !== this.account.username || password !== this.account.password) {
         return answer(401, { error: 'Invalid credentials' });
@@ -128,14 +134,15 @@ export class FakeProtect {
       return {
         ...answer(200, { username }),
         headers: {
-          'set-cookie': [`TOKEN=session-${this.session}; path=/; HttpOnly`],
+          'set-cookie': [`${this.cookieName}=session-${this.session}; path=/; HttpOnly`],
           'x-csrf-token': `csrf-${this.session}`,
         },
       };
     }
     if (target.pathname === '/proxy/protect/api/cameras') {
       const valid =
-        headers.cookie === `TOKEN=session-${this.session}` &&
+        this.protectAccess &&
+        headers.cookie === `${this.cookieName}=session-${this.session}` &&
         headers['x-csrf-token'] === `csrf-${this.session}`;
       if (!this.session || !valid) {
         return answer(401, { error: 'Unauthorized' });

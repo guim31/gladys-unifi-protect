@@ -77,3 +77,36 @@ test('the connection test tells how many cameras the night detection reads', asy
   // No camera tells isDark in the fixtures yet.
   assert.match(ack.data.message.fr, /Détection de nuit : lue sur 0 caméra\(s\)\.$/);
 });
+
+test('a UniFi OS cookie named UOS_TOKEN opens the session too', async (t) => {
+  const protect = new FakeProtect();
+  protect.cookieName = 'UOS_TOKEN';
+  protect.dark.set('F4E2C6000001', true);
+  const w = await world(t, { protect, config: ACCOUNT });
+  await createAll(w);
+  assert.equal(darkOf(w, MACS.DOORBELL), 1);
+});
+
+test('an account that cannot see Protect: one login, never a loop', async (t) => {
+  const protect = new FakeProtect();
+  protect.protectAccess = false;
+  const w = await world(t, { protect, config: ACCOUNT });
+  assert.equal(await w.hub.readDarkness(), false);
+  assert.equal(await w.hub.readDarkness(), false);
+  assert.equal(logins(w), 1);
+});
+
+test('a console that restarts (login 404) is tried again; reads share one login', async (t) => {
+  const protect = new FakeProtect();
+  protect.loginStatus = 404;
+  protect.dark.set('F4E2C6000001', true);
+  const w = await world(t, { protect, config: ACCOUNT });
+  await createAll(w);
+  assert.equal(await w.hub.readDarkness(), false);
+  protect.loginStatus = null;
+  const before = logins(w);
+  const results = await Promise.all([w.hub.readDarkness(), w.hub.readDarkness()]);
+  assert.deepEqual(results, [true, true]);
+  assert.equal(logins(w) - before, 1);
+  assert.equal(darkOf(w, MACS.DOORBELL), 1);
+});

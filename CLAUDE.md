@@ -278,7 +278,7 @@ le portail `developer.ui.com` et `fw-update.ubnt.com` sont refusés par le proxy
 
 **Détection de nuit (18/10/2026, stefanbauer, t/11350)** : l'API Integration ne donne pas `isDark`.
 Champs facultatifs `username` / `password` (compte local, sans 2FA) → `src/protect/legacy.js` lit l'API
-**interne** : `POST /api/auth/login` (cookie `TOKEN`, en-tête `x-csrf-token`), puis `GET
+**interne** : `POST /api/auth/login` (cookie `TOKEN` ou `UOS_TOKEN`, en-tête `x-csrf-token`), puis `GET
 /proxy/protect/api/cameras` (`isDark` par MAC), toutes les 60 s (`darkMs`), lecture seule. Fonctionnalité
 `dark` (`input/binary`) publiée **seulement** quand le compte est configuré. Un refus de connexion n'est pas
 retenté avant une nouvelle config (verrouillage de compte). Champs relevés dans uiprotect, **pas sur une

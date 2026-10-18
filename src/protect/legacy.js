@@ -29,12 +29,15 @@ const header = (headers, name) => {
   return Array.isArray(value) ? value[0] : value;
 };
 
-/** The `TOKEN=…` pair of the Set-Cookie headers, null when absent. */
+// Accounts refused for good: retrying them would lock the account.
+const REFUSALS = new Set([400, 401, 403, 499]);
+
+/** The `TOKEN=…` (or `UOS_TOKEN=…`) pair of the Set-Cookie headers, null when absent. */
 function tokenCookie(headers) {
   const cookies = [headers?.['set-cookie'] ?? []].flat();
   for (const cookie of cookies) {
     const pair = String(cookie).split(';')[0].trim();
-    if (/^TOKEN=./.test(pair)) {
+    if (/^(UOS_)?TOKEN=./.test(pair)) {
       return pair;
     }
   }
@@ -60,6 +63,7 @@ export class LegacyReader {
     this.csrf = null;
     /** The login was refused: not tried again with these credentials. */
     this.refused = null;
+    this.reading = null;
   }
 
   async send(path, { method = 'GET', json, headers = {} } = {}) {
@@ -92,8 +96,8 @@ export class LegacyReader {
           : `Login refused (HTTP ${response.status})`,
         { status: response.status },
       );
-      // 429 and server errors pass; a refusal of the account does not.
-      if (response.status < 429 || response.status === 499) {
+      // A refusal of the account is final; a busy or restarting console is not.
+      if (REFUSALS.has(response.status)) {
         this.refused = error;
       }
       throw error;
@@ -106,7 +110,10 @@ export class LegacyReader {
     const response = await this.send(CAMERAS_PATH, {
       headers: { cookie: this.cookie, ...(this.csrf ? { 'x-csrf-token': this.csrf } : {}) },
     });
-    this.csrf = header(response.headers, 'x-updated-csrf-token') ?? this.csrf;
+    this.csrf =
+      header(response.headers, 'x-updated-csrf-token') ??
+      header(response.headers, 'x-csrf-token') ??
+      this.csrf;
     return response;
   }
 
@@ -114,16 +121,35 @@ export class LegacyReader {
    * Whether each camera sees the night, by MAC.
    * @returns {Promise<Map<string, boolean>>}
    */
-  async darkness() {
-    if (!this.cookie) {
+  darkness() {
+    // Concurrent reads (timer, connection test) share one login and one read.
+    this.reading ??= this.readDarkness().finally(() => {
+      this.reading = null;
+    });
+    return this.reading;
+  }
+
+  async readDarkness() {
+    const hadSession = Boolean(this.cookie);
+    if (!hadSession) {
       await this.login();
     }
     let response = await this.getCameras();
-    if (response.status === 401 || response.status === 403) {
+    if (hadSession && (response.status === 401 || response.status === 403)) {
       // The session expired: one new login.
       this.cookie = null;
       await this.login();
       response = await this.getCameras();
+    }
+    if (response.status === 401 || response.status === 403) {
+      // Refused right after a login: the account cannot see Protect.
+      this.cookie = null;
+      this.refused = new ProtectError(
+        ERROR_KINDS.AUTH,
+        `Account without access to Protect (HTTP ${response.status})`,
+        { status: response.status },
+      );
+      throw this.refused;
     }
     if (response.status !== 200) {
       throw new ProtectError(ERROR_KINDS.HTTP, `Cameras failed with HTTP ${response.status}`, {

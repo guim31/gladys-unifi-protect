@@ -251,7 +251,9 @@ export class ProtectHub {
     if (changed) {
       this.openSockets();
     }
-    await this.readDarkness();
+    if (this.read.ok) {
+      await this.readDarkness();
+    }
     this.scheduleRefresh();
     this.scheduleSnapshots();
     this.scheduleDarkness();
