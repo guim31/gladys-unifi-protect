@@ -1,6 +1,6 @@
 {
   "name": "gladys-unifi-protect",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "UniFi Protect integration for Gladys Assistant: cameras, doorbells, floodlights and sensors over the local Integration API.",
   "type": "module",
